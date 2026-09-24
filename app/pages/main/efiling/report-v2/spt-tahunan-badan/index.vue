@@ -159,6 +159,7 @@ function viewDetail(spt: SptTahunanBadan, close: () => void) {
             value-type="string"
             format="YYYY"
             placeholder="Masa pajak"
+            :input-attr="{ 'aria-label': 'Filter masa pajak' }"
             use-portal
           />
         </div>
@@ -167,7 +168,15 @@ function viewDetail(spt: SptTahunanBadan, close: () => void) {
             <MpInputLeftAddon id="spt-search-addon">
               <MpIcon name="search" size="sm" />
             </MpInputLeftAddon>
-            <MpInput id="spt-search" v-model="keyword" placeholder="Cari SPT" is-clearable />
+            <!-- is-clearable emits undefined on clear; keep keyword a string. -->
+            <MpInput
+              id="spt-search"
+              :model-value="keyword"
+              placeholder="Cari SPT"
+              aria-label="Cari SPT"
+              is-clearable
+              @update:model-value="keyword = $event ?? ''"
+            />
           </MpInputGroup>
         </div>
       </div>

@@ -79,6 +79,7 @@ function showTotal(row: AccountRow, col: L1Col | 'c9') {
                   v-else-if="isEditable(row, c.key)"
                   :id="`l1a-${row.code}-${c.key}`"
                   v-model="labaRugiEntry(row.code)[c.key as 'c3']"
+                  :aria-label="`${row.label} — ${c.label}`"
                   size="sm"
                   :is-disabled="isReadOnly"
                 />
@@ -86,6 +87,7 @@ function showTotal(row: AccountRow, col: L1Col | 'c9') {
                   v-else-if="c.computed"
                   :id="`l1a-${row.code}-${c.key}`"
                   :model-value="labaRugiValue(data, row.code, c.key as L1Col)"
+                  :aria-label="`${row.label} — ${c.label}`"
                   size="sm"
                   is-disabled
                 />
@@ -105,6 +107,7 @@ function showTotal(row: AccountRow, col: L1Col | 'c9') {
                 v-if="row.kind === 'input'"
                 :id="`l1b-${row.code}`"
                 v-model="data.posisiKeuangan[row.code]"
+                :aria-label="row.label"
                 size="sm"
                 :is-disabled="isReadOnly"
               />

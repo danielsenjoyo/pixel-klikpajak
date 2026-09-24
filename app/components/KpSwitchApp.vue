@@ -1,30 +1,12 @@
 <script setup lang="ts">
 import { MpButton, MpDivider, MpDrawer, MpDrawerBody, MpDrawerCloseButton, MpDrawerContent, MpDrawerOverlay, MpIcon, MpText } from '@mekari/pixel3'
+import { switchAppGroups } from '~/data/headerMenus'
 
 // Mekari app switcher. Source: Header/Bar/Action/SwitchApp (+ Drawer, Item) —
 // a right drawer listing Mekari products. Hidden for Jurnal add-on users.
 const isOpen = ref(false)
 
-const groups = [
-  {
-    title: 'Produk Mekari yang Anda gunakan',
-    items: [{ label: 'Mekari Klikpajak', desc: 'Aplikasi pengelolaan pajak terdaftar DJP', icon: 'klikpajak-brand' }],
-  },
-  {
-    title: 'Produk Mekari lainnya',
-    items: [
-      { label: 'Mekari Talenta', desc: 'Aplikasi payroll & HRIS terautomasi', icon: 'talenta-brand' },
-      { label: 'Mekari Jurnal', desc: 'Aplikasi akuntansi online terintegrasi', icon: 'jurnal-brand' },
-      { label: 'Mekari Qontak', desc: 'Aplikasi omnichannel CRM terautomasi', icon: 'qontak-brand' },
-      { label: 'Mekari Flex', desc: 'Aplikasi manajemen tunjangan karyawan yang fleksibel', icon: 'flex-brand' },
-      { label: 'Mekari e-Sign', desc: 'Aplikasi penyelenggara layanan e-Signature', icon: 'sign-brand' },
-    ],
-  },
-  {
-    title: 'Lainnya dari Mekari',
-    items: [{ label: 'Mekari University', desc: 'Platform belajar profesional', icon: 'university-brand' }],
-  },
-]
+const groups = switchAppGroups
 </script>
 
 <template>

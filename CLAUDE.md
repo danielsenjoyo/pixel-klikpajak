@@ -99,6 +99,10 @@ so every nav link resolves and a ported page simply replaces the placeholder.
    warning=orange, critical=red, completed=green.
    `MpFormControl` replaces the inner input's id with its own id (target the control id).
    `v-tooltip` must always get an object — never `undefined` (it throws); v-if the wrapper.
+   `MpInput is-clearable` emits `undefined` on clear — bind `:model-value` and coerce
+   (`@update:model-value="q = $event ?? ''"`) so string methods don't throw.
+   Inputs in table cells have no `<label>`: pass `aria-label` (`KpCurrencyInput` / `SptField`
+   take an `ariaLabel` prop).
 3. Custom CSS uses token variables only: `--mp-colors-<semantic>` (e.g.
    `--mp-colors-text-secondary`, `--mp-colors-border-default`), `--mp-spacing-*`,
    `--mp-radii-*`, `--mp-font-sizes-*`, `--mp-font-weights-*`, `--mp-shadows-*`.

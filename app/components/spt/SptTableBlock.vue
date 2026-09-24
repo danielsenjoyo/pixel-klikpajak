@@ -49,6 +49,8 @@ const leadCols = computed(() => (numbered.value ? 1 : 0))
 
 const cellWidth = (c: FieldDef) => `${c.width ?? (c.type === 'currency' || c.type === 'usd' ? 184 : 160)}px`
 const cellValue = (c: FieldDef, r: Row) => (c.compute ? c.compute(r, props.ctx) : c.derive ? c.derive(r) : r[c.key])
+/** "Nama baris 2" — table cells have no <label>, so each control is named after its column. */
+const cellLabel = (c: FieldDef, i: number) => `${c.label.replace(/\s*\(\d+\)$/, '')} baris ${i + 1}`
 const isNumeric = (c: FieldDef) => c.type === 'currency' || c.type === 'usd' || !!c.compute
 
 function columnTotal(c: FieldDef) {
@@ -188,6 +190,7 @@ function deleteRow(row: Row) {
                     v-if="c.derive"
                     :id="`${idPrefix}-${i}-${c.key}`"
                     :model-value="c.derive(r)"
+                    :aria-label="cellLabel(c, i)"
                     size="sm"
                     is-disabled
                   />
@@ -198,6 +201,7 @@ function deleteRow(row: Row) {
                     :type="c.type"
                     :options="c.options"
                     :placeholder="c.placeholder"
+                    :aria-label="cellLabel(c, i)"
                     size="sm"
                     :is-disabled="isReadOnly"
                   />
@@ -206,6 +210,7 @@ function deleteRow(row: Row) {
                     :id="`${idPrefix}-${i}-${c.key}`"
                     :model-value="cellValue(c, r) as number"
                     :prefix="c.type === 'usd' ? '$' : 'Rp'"
+                    :aria-label="cellLabel(c, i)"
                     size="sm"
                     is-disabled
                   />

@@ -13,6 +13,8 @@ const props = withDefaults(defineProps<{
   placeholder?: string
   /** Addon text — "Rp" by default, "$" for valas amounts. */
   prefix?: string
+  /** Accessible name when no <label for> points at the input (table cells). */
+  ariaLabel?: string
 }>(), { modelValue: null, size: 'md', placeholder: '', prefix: 'Rp' })
 
 const emit = defineEmits<{ 'update:modelValue': [value: number | null] }>()
@@ -41,6 +43,7 @@ function onInput(value: string | number) {
       :is-disabled="isDisabled"
       :is-invalid="isInvalid"
       :placeholder="placeholder"
+      :aria-label="ariaLabel"
       inputmode="numeric"
       autocomplete="off"
       @update:model-value="onInput"

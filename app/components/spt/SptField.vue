@@ -14,6 +14,8 @@ const props = withDefaults(defineProps<{
   size?: 'sm' | 'md'
   isDisabled?: boolean
   isInvalid?: boolean
+  /** Accessible name when no <label for> points at the control (table cells). */
+  ariaLabel?: string
 }>(), { size: 'md', modelValue: null })
 
 const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
@@ -40,6 +42,7 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
     :is-disabled="isDisabled"
     :is-invalid="isInvalid"
     :placeholder="placeholder"
+    :aria-label="ariaLabel"
     @update:model-value="emit('update:modelValue', $event)"
   />
 
@@ -51,6 +54,7 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
       :is-disabled="isDisabled"
       :is-invalid="isInvalid"
       :placeholder="placeholder ?? '0'"
+      :aria-label="ariaLabel"
       inputmode="decimal"
       autocomplete="off"
       @update:model-value="onNumberText($event, true)"
@@ -68,6 +72,7 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
     :is-disabled="isDisabled"
     :is-invalid="isInvalid"
     :placeholder="placeholder"
+    :aria-label="ariaLabel"
     inputmode="numeric"
     autocomplete="off"
     @update:model-value="onNumberText($event, false)"
@@ -83,6 +88,7 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
     :placeholder="placeholder ?? DATE_PLACEHOLDER[type]"
     :is-disabled="isDisabled"
     :is-invalid="isInvalid"
+    :input-attr="ariaLabel ? { 'aria-label': ariaLabel } : {}"
     use-portal
     @update:model-value="emit('update:modelValue', $event || null)"
   />
@@ -94,6 +100,7 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
     :size="size"
     :is-disabled="isDisabled"
     :is-invalid="isInvalid"
+    :aria-label="ariaLabel"
     is-full-width
     @update:model-value="emit('update:modelValue', $event || null)"
   >
@@ -127,6 +134,7 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
     :is-disabled="isDisabled"
     :is-invalid="isInvalid"
     :placeholder="placeholder"
+    :aria-label="ariaLabel"
     autocomplete="off"
     @update:model-value="emit('update:modelValue', $event === '' ? null : $event)"
   />

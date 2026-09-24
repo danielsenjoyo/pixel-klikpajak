@@ -72,6 +72,8 @@ shared `:disabled` state. The sidebar's 10px row inset from production is `--kp-
 - Per-row `MpPopover` passes `:is-keep-alive="false"`.
 - `MpFormControl` replaces the inner input's id with its own — label `for` and
   tests target the control id.
+- `MpInput is-clearable` emits `undefined` on clear — coerce it back to a string
+  (`@update:model-value="q = $event ?? ''"`), or `.trim()` on it throws.
 - Teleported content (`MpPopoverContent`, drawer body) is styled from an
   unscoped `<style>` block; scoped classes won't reach it.
 
@@ -90,7 +92,9 @@ shared `:disabled` state. The sidebar's 10px row inset from production is `--kp-
 **Forms**
 
 - Validated fields sit in `MpFormControl` (label, helper, error).
-- An input with no `MpFormControl` has an `aria-label` or a `<label for>`.
+- An input with no `MpFormControl` has an `aria-label` or a `<label for>` — including
+  every input in a table cell (`KpCurrencyInput` / `SptField` `ariaLabel`, named
+  "<column> baris <n>"), and filters that only show a placeholder.
 
 **States**
 

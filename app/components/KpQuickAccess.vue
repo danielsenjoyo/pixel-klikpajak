@@ -1,19 +1,10 @@
 <script setup lang="ts">
 import { MpIcon, MpPopover, MpPopoverContent, MpPopoverList, MpPopoverListItem, MpPopoverTrigger } from '@mekari/pixel3'
+import { quickAccessGroups } from '~/data/headerMenus'
 
 // "+" quick-access menu. Source: Header/Bar/Action/Quick — a dark popover with
 // Buat / Lapor / Upload shortcuts (each gated by a create/view permission).
-const actions = [
-  {
-    title: 'Buat',
-    items: [
-      { label: 'ID Billing', path: '/main/ebilling/create' },
-      { label: 'Faktur keluaran', path: '/main/efaktur-v2/out/create' },
-    ],
-  },
-  { title: 'Lapor', items: [{ label: 'SPT Tahunan', path: '/main/efiling/report/spt' }] },
-  { title: 'Upload', items: [{ label: 'Bukti potong', path: '/main/ebupot-v2/unifikasi/domestic/create' }] },
-]
+const actions = quickAccessGroups
 
 function go(path: string, close: () => void) {
   close()
