@@ -148,15 +148,22 @@ export interface LampiranDef {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+/** An answered Tidak (false) counts as filled. */
+const isFilled = (v: unknown) => v !== null && v !== undefined && v !== ''
+
 export const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 
 export function sumColumn(rows: Row[], key: string, col?: FieldDef, ctx?: Ctx): number {
   return rows.reduce((acc, r) => acc + (col?.compute && ctx ? col.compute(r, ctx) : num(r[key])), 0)
 }
 
+/** A row counts once any field besides its id has a value (answered Tidak = false counts). */
+export const isRowFilled = (r: Row) => Object.entries(r).some(([k, v]) => k !== 'id' && isFilled(v))
+
+/** Rows that hold data — blank rows added with "Tambah baris" are ignored in totals and links. */
 export function tableRows(section: SectionData, blockKey: string): Row[] {
   const v = section[blockKey]
-  return Array.isArray(v) ? v : []
+  return Array.isArray(v) ? v.filter(isRowFilled) : []
 }
 
 export function blockValues(section: SectionData, blockKey: string): BlockValues {
@@ -164,15 +171,12 @@ export function blockValues(section: SectionData, blockKey: string): BlockValues
   return v && !Array.isArray(v) ? v : {}
 }
 
-/** An answered Tidak (false) counts as filled. */
-const isFilled = (v: unknown) => v !== null && v !== undefined && v !== ''
-
-/** A lampiran counts as filled once any table has a row or any other block has a value. */
+/** A lampiran counts as filled once any table row or any other block has a value. */
 export function isSectionFilled(def: LampiranDef, data: SectionData | undefined): boolean {
   if (!data) return false
   return def.parts.some(p => p.blocks.some((b) => {
     const v = data[b.key]
-    if (b.kind === 'table') return Array.isArray(v) && v.length > 0
+    if (b.kind === 'table') return tableRows(data, b.key).length > 0
     return !!v && !Array.isArray(v) && Object.values(v).some(isFilled)
   }))
 }
