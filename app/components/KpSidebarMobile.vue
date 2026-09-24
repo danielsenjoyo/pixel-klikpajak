@@ -122,7 +122,7 @@ function close() {
   color: var(--mp-colors-text-selected);
   font-size: var(--mp-font-sizes-sm);
   font-weight: var(--mp-font-weights-semi-bold);
-  letter-spacing: var(--mp-letter-spacings-widest);
+  letter-spacing: 2px; /* pixel-police-allow: production section-title tracking; widest token is 1.2px (rules.md → exceptions) */
   text-transform: uppercase;
 }
 

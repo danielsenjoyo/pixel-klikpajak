@@ -48,6 +48,7 @@ Multi-line opening tags are read as a whole, so `<button` on one line with
 | `KpSidebarItem` group row, `SptSectionNav` group row (expand/collapse) | Pixel 3 ships no navigation component; the rows match production Klikpajak's sidebar. Leaf rows are `NuxtLink`s. |
 | `KpSidebarMobile` "Keluar" row                                        | an action styled as one of the drawer's nav rows                                            |
 | `KpAccountMenu` trigger (avatar + company name + NPWP)                | a two-line composite trigger; `MpButton` has a fixed height. The allow comment sits above `<MpPopoverTrigger>`, which clones its first child |
+| `letter-spacing: 2px` on uppercase section titles (`KpSidebarPanel`, `KpSidebarMobile`) | production Klikpajak's tracking; the widest Pixel token (`--mp-letter-spacings-widest`, 0.1em) is only 1.2px at 12px |
 
 Icon-only buttons use `.kp-icon-btn` (40px square) or `.kp-icon-btn kp-icon-btn--compact`
 (padding-sized: collapse toggles, pagination arrows, the account-menu back arrow), with a
