@@ -40,8 +40,9 @@ const bayar6 = (v: BlockValues, ctx: Ctx) => Math.round(0.22 * pkp6(v, ctx)) - n
 const nilaiFasilitas13A = (v: BlockValues) => Math.round(num(v.fasPersentase) / 100 * num(v.realisasiAkumulasi) / 6)
 /** Lampiran 13B III kolom 7 total: tambahan pengurangan litbang. */
 const tambahanLitbang = (rows: Row[]) => rows.reduce((a, r) => a + Math.round(num(r.biaya) * num(r.persen) / 100), 0)
-/** Lampiran 13B IV angka 3: litbang not yet used (bagian III + angka 2). */
-const belumLitbang = (v: BlockValues, ctx: Ctx) => tambahanLitbang(tableRows(ctx.section, 'litbang')) + num(v.sebelumnya)
+/** Lampiran 13B IV angka 3 (1 - 2): bagian III total less what earlier years already used; never below 0. */
+const sisaLitbang = (tambahan: number, sebelumnya: unknown) => Math.max(0, tambahan - num(sebelumnya))
+const belumLitbang = (v: BlockValues, ctx: Ctx) => sisaLitbang(tambahanLitbang(tableRows(ctx.section, 'litbang')), v.sebelumnya)
 /** Lampiran 13B IV angka 5: usable this year, at most 40% of SPT Induk angka 9. */
 export function litbangDimanfaatkan(belum: number, pkpAngka9: number): number {
   return Math.max(0, Math.min(Math.round(0.4 * Math.max(0, pkpAngka9)), belum))
@@ -1039,7 +1040,7 @@ const lampiran13b: LampiranDef = {
         items: [
           item('1', 'Jumlah tambahan pengurangan penghasilan bruto penelitian dan pengembangan', 'jumlah', { type: 'computed', hint: 'Diisi dari bagian III', compute: (_, ctx) => tambahanLitbang(tableRows(ctx.section, 'litbang')) }),
           item('2', 'Jumlah tambahan pengurangan penghasilan bruto penelitian dan pengembangan yang termanfaatkan tahun-tahun sebelumnya', 'sebelumnya'),
-          item('3', 'Jumlah tambahan pengurangan penghasilan bruto penelitian dan pengembangan yang belum termanfaatkan tahun berjalan (1 + 2)', 'belum', { type: 'computed', compute: belumLitbang }),
+          item('3', 'Jumlah tambahan pengurangan penghasilan bruto penelitian dan pengembangan yang belum termanfaatkan tahun berjalan (1 - 2)', 'belum', { type: 'computed', compute: belumLitbang }),
           item('4', '40% x penghasilan kena pajak sebelum fasilitas', 'batas', { type: 'computed', hint: 'Dari SPT Induk angka 9', compute: (_, ctx) => Math.round(0.4 * Math.max(0, ctx.pkpAngka9)) }),
           item('5', 'Tambahan pengurang penghasilan bruto penelitian dan pengembangan yang belum termanfaatkan tahun berjalan (maksimal sebesar angka (4))', 'dimanfaatkan', { type: 'computed', hint: 'Mengisi SPT Induk angka 10', compute: (v, ctx) => litbangDimanfaatkan(belumLitbang(v, ctx), ctx.pkpAngka9) }),
           item('6', 'Sisa tambahan pengurangan penghasilan bruto penelitian dan pengembangan yang belum termanfaatkan tahun berjalan (3 - 5)', 'sisa', { type: 'computed', compute: (v, ctx) => belumLitbang(v, ctx) - litbangDimanfaatkan(belumLitbang(v, ctx), ctx.pkpAngka9) }),
@@ -1182,7 +1183,7 @@ export function lampiranLinks(lampiran: Record<string, SectionData>): LampiranLi
     d5: hasAny(l13a, ['fasPersentase', 'realisasiAkumulasi']) ? nilaiFasilitas13A(l13a) : null,
     d6: hasAny(rekap13b, biaya13b) ? biaya13b.reduce((acc, k) => acc + num(rekap13b[k]), 0) : null,
     d8: l7.length ? sumColumn(l7, 'kIni') : null,
-    litbangBelum: litbang.length || hasAny(tambahan13b, ['sebelumnya']) ? tambahanLitbang(litbang) + num(tambahan13b.sebelumnya) : null,
+    litbangBelum: litbang.length || hasAny(tambahan13b, ['sebelumnya']) ? sisaLitbang(tambahanLitbang(litbang), tambahan13b.sebelumnya) : null,
     e13: l3a.length || l3b.length ? sumColumn(l3a, 'kredit') + sumColumn(l3b, 'pph') : null,
     e16: l13c.length ? l13c.reduce((acc, r) => acc + fasilitas13C(r), 0) : null,
   }

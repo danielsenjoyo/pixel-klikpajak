@@ -32,8 +32,8 @@ Done so far: **boilerplate only** — shell, nav, layouts, placeholders.
 - Other Lampiran 1 sectors (only "Umum" / 1A is designed).
 - Lampiran → Induk links: every Induk amount with a lampiran source is filled from it once the
   lampiran has data (C.2, C.3, D.5, D.6, D.8, D.10, D.12, E.13, E.16 — see `LINK_SOURCE` in
-  `spt1771Induk.ts`), plus Lampiran 7 kolom 9 → Lampiran 6 angka 2. Lampiran 13B III/IV
-  arithmetic (angka 3 = 1 + 2) follows the Figma labels; confirm against the source.
+  `spt1771Induk.ts`), plus Lampiran 7 kolom 9 → Lampiran 6 angka 2. Lampiran 13B IV angka 3
+  is 1 - 2 (Figma says "1 + 2"; changed on review since angka 2 is already used).
 - Lampiran 5B drawer in Figma is a copy of Lampiran 7's; built from the 5B table instead.
 - Code lists (kode negara, kode objek pajak, kode jenis transaksi…) are free text; replace with
   selects when the reference data is ported.
