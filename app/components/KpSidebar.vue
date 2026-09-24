@@ -3,9 +3,9 @@ import { MpDivider, MpIcon, MpText } from '@mekari/pixel3'
 import { sidebarGroups, type NavModule } from '~/data/navigation'
 
 // First-level sidebar. Source: components/Pixel/Sidebar/Container (+ Menu, Action).
-// 216px wide, or a 60px icon rail while a module with a second-level panel is
-// active and the user collapsed it (Shift+X). Hovering the rail expands it over
-// the content. Footer: collapse toggle + company ID.
+// 216px wide, or a 60px icon rail — it auto-collapses to the rail when a module
+// with a second-level panel becomes active, and the user can toggle it (Shift+X).
+// Hovering the rail expands it over the content. Footer: collapse toggle + company ID.
 const { company } = useSession()
 const {
   module,
@@ -17,8 +17,8 @@ const {
   toggleParent,
 } = useSidebar()
 
-const route = useRoute()
-watch(() => route.path, syncWithRoute, { immediate: true })
+// Only on module change, so an expanded choice survives navigation inside a module.
+watch(() => module.value?.id, syncWithRoute, { immediate: true })
 
 function isActive(item: NavModule) {
   return module.value?.id === item.id

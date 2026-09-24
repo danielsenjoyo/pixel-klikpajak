@@ -35,7 +35,8 @@ app/
   layouts/default.vue       logged-in shell: fixed header + sidebar + sub-panel; Shift+X / Shift+C
   layouts/blank.vue         no-chrome shell (auth, onboarding, public, print)
   components/KpHeader       logo · Daftar Efin · KpQuickAccess (+) · KpSwitchApp · KpAccountMenu
-  components/KpSidebar      first-level sidebar (216px / 60px rail, hover-expands) + company ID
+  components/KpSidebar      first-level sidebar (216px / 60px rail, hover-expands) + company ID;
+                            auto-collapses to the rail on entering a module with a sub-panel
   components/KpSidebarPanel second-level panel (232px / 8px strip) for modules with sections
   components/KpSidebarItem  panel row / collapsible group (recursive)
   components/KpSidebarMobile  drawer version below 992px

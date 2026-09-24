@@ -51,13 +51,19 @@ export function useSidebar() {
     return parent + child
   })
 
-  // Source renderChildMenu: a page without a second-level panel always shows the
-  // parent expanded, and that expanded state is persisted.
+  function setParentCollapse(isCollapse: boolean) {
+    if (stored.value.parent.isCollapse === isCollapse) return
+    stored.value = { ...stored.value, parent: { isCollapse } }
+    write(stored.value)
+  }
+
+  // Called when the active module changes (and on first load):
+  // - entering a module with a second-level panel auto-collapses the parent to the
+  //   icon rail; the user can still expand it (toggle / Shift+X / hover), and that
+  //   choice holds while they stay inside the module;
+  // - a page without a second-level panel always shows the parent expanded.
   function syncWithRoute() {
-    if (!hasChild.value && stored.value.parent.isCollapse) {
-      stored.value = { ...stored.value, parent: { isCollapse: false } }
-      write(stored.value)
-    }
+    setParentCollapse(hasChild.value)
   }
 
   function toggleParent() {
