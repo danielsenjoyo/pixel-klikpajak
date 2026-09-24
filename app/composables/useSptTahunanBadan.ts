@@ -25,5 +25,14 @@ export function useSptTahunanBadan() {
     list.value = list.value.filter(s => s.id !== id)
   }
 
-  return { list, sorted, hasOpenSpt, create, remove }
+  function get(id: string) {
+    return list.value.find(s => s.id === id)
+  }
+
+  /** Lapor SPT → handed to DJP; the list shows "Diproses DJP". */
+  function submit(id: string) {
+    list.value = list.value.map(s => (s.id === id ? { ...s, status: 'IN_PROGRESS' as const } : s))
+  }
+
+  return { list, sorted, hasOpenSpt, create, remove, get, submit }
 }

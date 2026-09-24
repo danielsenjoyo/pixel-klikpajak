@@ -45,9 +45,47 @@ export function canDelete(spt: SptTahunanBadan) {
   return spt.status === 'READY' || spt.status === 'FAILED'
 }
 
-/** Detail route (source: EfilingReportSptTahunanBadanDetail — decoupled /v2 app). */
-export function detailPath(spt: SptTahunanBadan) {
-  return `/v2/main/efiling/report/spt-tahunan/badan/${spt.id}/lampiran-1`
+export const LIST_PATH = '/main/efiling/report-v2/spt-tahunan-badan'
+
+/**
+ * Lapor SPT page (Figma "--> SPT"): SPT Induk + Lampiran 1–14.
+ * Source equivalent: EfilingReportSptTahunanBadanDetail (decoupled /v2 app).
+ */
+export function detailPath(spt: Pick<SptTahunanBadan, 'id'>, section: SptSectionKey = 'induk') {
+  return `${LIST_PATH}/${spt.id}/${section}`
+}
+
+/** Submitted or with DJP → the form is read-only. */
+export function isLocked(spt: SptTahunanBadan) {
+  return spt.status === 'IN_PROGRESS' || spt.status === 'SUBMITTED'
+}
+
+export interface SptSection {
+  key: string
+  label: string
+  children?: SptSection[]
+}
+
+/** In-page section menu (Figma "menu"): Lampiran 10–13 expand into parts. */
+export const SPT_SECTIONS: SptSection[] = [
+  { key: 'induk', label: 'SPT Induk' },
+  ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map(i => ({ key: `lampiran-${i}`, label: `Lampiran ${i}` })),
+  { key: 'lampiran-10', label: 'Lampiran 10', children: ['A', 'B', 'C', 'D'].map(p => ({ key: `lampiran-10${p.toLowerCase()}`, label: `Lampiran 10${p}` })) },
+  { key: 'lampiran-11', label: 'Lampiran 11', children: ['A', 'B', 'C'].map(p => ({ key: `lampiran-11${p.toLowerCase()}`, label: `Lampiran 11${p}` })) },
+  { key: 'lampiran-12', label: 'Lampiran 12', children: ['A', 'B'].map(p => ({ key: `lampiran-12${p.toLowerCase()}`, label: `Lampiran 12${p}` })) },
+  { key: 'lampiran-13', label: 'Lampiran 13', children: ['A', 'B', 'C'].map(p => ({ key: `lampiran-13${p.toLowerCase()}`, label: `Lampiran 13${p}` })) },
+  { key: 'lampiran-14', label: 'Lampiran 14' },
+]
+
+export type SptSectionKey = string
+
+export function findSection(key: string): SptSection | undefined {
+  for (const s of SPT_SECTIONS) {
+    if (s.key === key) return s
+    const child = s.children?.find(c => c.key === key)
+    if (child) return child
+  }
+  return undefined
 }
 
 export const sptTahunanBadanSeed: SptTahunanBadan[] = [

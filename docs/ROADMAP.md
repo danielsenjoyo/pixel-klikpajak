@@ -17,7 +17,34 @@ Done so far: **boilerplate only** — shell, nav, layouts, placeholders.
 - `/main/efiling/report-v2/spt-tahunan-badan` — SPT Tahunan Badan index (Figma
   SPT-Tahunan-Badan › Index: default, blank, Lapor SPT menu + create modal, toast).
   Established the index-page pattern and `KpPageHeader`, `KpStage`, `KpPagination`,
-  `KpBlankSlate`, `KpLaporSptMenu`.
+  `KpBlankSlate`.
+- `/main/efiling/report-v2/spt-tahunan-badan/:id/:section` — Lapor SPT Tahunan Badan
+  (Figma SPT-Tahunan-Badan › SPT): SPT Induk A–J with calculations, Lampiran 1A
+  (Laba Rugi + Posisi Keuangan), section menu, save/draft, unsaved guard, submit.
+
+## Next: remaining SPT Tahunan Badan lampiran (Figma "--> SPT")
+
+Each has blank / add data (drawer) / filled frames. Replace `SptLampiranPlaceholder`
+for the section key and wire any Induk cross-references.
+
+| Lampiran | Figma frames | Feeds SPT Induk |
+| --- | --- | --- |
+| 2 A/B | blank, add data, filled | 21c, 21d |
+| 3 A/B | blank, add data (drawer), filled | 13 |
+| 4 A/B | blank, add data, filled | C.2, C.3 |
+| 5 A/B | blank, add data (drawer), filled | C.1a, 21j |
+| 6 | single | 20 |
+| 7 | blank, add data (drawer), filled | 8 |
+| 8 | single | 11c |
+| 9 | blank, add data I, semi filled | 21e |
+| 10 A–D | 10A (3 states), 10B, 10C (3), 10D | 21a, 21b |
+| 11 A–C | 11A I–V, 11B I–III, 11C | 21f |
+| 12 A/B | 12A, 12B | — |
+| 13 A–C | 13A, 13B I–IV, 13C | 5, 6, 10, 16, 21g |
+| 14 | single | 21h |
+
+Also open: other Lampiran 1 sectors (only "Umum" / 1A is designed), tarif (c) via
+Lampiran 8 (currently a flat 11%).
 
 ## Phase 1 — Shared foundations (do before any module)
 

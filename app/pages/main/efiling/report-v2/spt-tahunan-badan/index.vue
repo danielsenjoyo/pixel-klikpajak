@@ -32,7 +32,6 @@ import {
   toast,
 } from '@mekari/pixel3'
 import blankSlateImage from '~/assets/images/blankslate-spt.png'
-import type { LaporSptItem } from '~/components/KpLaporSptMenu.vue'
 import {
   LAPOR_STATUS,
   canDelete,
@@ -47,6 +46,9 @@ import {
 // Figma: SPT-Tahunan-Badan › "--> Index" (default / blank / modal / toast frames).
 // Source: jurnal-tax pages/efiling/Report/sptTahunan/badan/List.
 useHead({ title: 'SPT Tahunan Badan · Klikpajak' })
+
+// Breadcrumb: the Lapor Pajak module entry (sidebar target).
+const LAPOR_PAJAK_PATH = '/main/efiling/report-v2'
 
 const { sorted, hasOpenSpt, create, remove } = useSptTahunanBadan()
 
@@ -103,20 +105,14 @@ function submitCreate() {
     createError.value = `SPT Tahunan Badan ${masaLabel({ year })} masih dalam proses. Selesaikan SPT tersebut terlebih dulu.`
     return
   }
-  create(year)
+  const spt = create(year)
   isCreateOpen.value = false
-  filterYear.value = null
-  keyword.value = ''
-  page.value = 1
   toast.notify({ id: 'toast-spt-created', variant: 'success', title: 'SPT Tahunan Badan berhasil dibuat' })
+  // Lapor SPT flow continues on the new SPT's form (SPT Induk).
+  navigateTo(detailPath(spt))
 }
 
 watch(createYear, (v) => { if (v) createError.value = '' })
-
-function onLaporSelect(item: LaporSptItem) {
-  if (item.key === 'spt-tahunan-badan') openCreate()
-  else if (item.path) navigateTo(item.path)
-}
 
 // ── Row actions ──────────────────────────────────────────────────────────────
 const deleteTarget = ref<SptTahunanBadan | null>(null)
@@ -146,13 +142,13 @@ function viewDetail(spt: SptTahunanBadan, close: () => void) {
 
 <template>
   <div class="spt-page">
-    <KpPageHeader title="Lapor Pajak">
+    <KpPageHeader title="SPT Tahunan Badan" :breadcrumbs="[{ label: 'Lapor Pajak', to: LAPOR_PAJAK_PATH }]">
       <template #actions>
-        <KpLaporSptMenu @select="onLaporSelect" />
+        <MpButton id="spt-lapor-spt" @click="openCreate">Lapor SPT</MpButton>
       </template>
     </KpPageHeader>
 
-    <KpStage title="SPT Tahunan Badan">
+    <KpStage>
       <!-- Filter bar -->
       <div class="spt-filter">
         <div class="spt-filter__field">

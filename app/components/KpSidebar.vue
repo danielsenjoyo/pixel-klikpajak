@@ -14,8 +14,12 @@ const {
   isParentExpandedVisually,
   isHovering,
   syncWithRoute,
+  resetPanelOverride,
   toggleParent,
 } = useSidebar()
+
+const route = useRoute()
+watch(() => route.meta.sidebarPanel, resetPanelOverride)
 
 // Only on module change, so an expanded choice survives navigation inside a module.
 watch(() => module.value?.id, syncWithRoute, { immediate: true })

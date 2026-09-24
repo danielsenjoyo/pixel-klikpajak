@@ -39,7 +39,11 @@ export function useSidebar() {
   const hasChild = computed(() => !!module.value?.sections?.length)
 
   const isParentCollapsed = computed(() => stored.value.parent.isCollapse)
-  const isChildCollapsed = computed(() => stored.value.child.isCollapse)
+  // Pages with meta.sidebarPanel === 'collapsed' (wide forms) start with the panel
+  // collapsed; a manual toggle there is remembered until the page changes.
+  const panelOverride = useState<boolean | null>('kp-sidebar-panel-override', () => null)
+  const isPanelForced = computed(() => route.meta.sidebarPanel === 'collapsed')
+  const isChildCollapsed = computed(() => (isPanelForced.value ? (panelOverride.value ?? true) : stored.value.child.isCollapse))
   // Hovering a collapsed parent expands it over the content (source handleMouseEnter).
   const isParentExpandedVisually = computed(() => !isParentCollapsed.value || isHovering.value)
 
@@ -73,8 +77,16 @@ export function useSidebar() {
   }
 
   function toggleChild() {
+    if (isPanelForced.value) {
+      panelOverride.value = !isChildCollapsed.value
+      return
+    }
     stored.value = { ...stored.value, child: { isCollapse: !stored.value.child.isCollapse } }
     write(stored.value)
+  }
+
+  function resetPanelOverride() {
+    panelOverride.value = null
   }
 
   return {
@@ -87,6 +99,7 @@ export function useSidebar() {
     isMobileOpen,
     contentOffset,
     syncWithRoute,
+    resetPanelOverride,
     toggleParent,
     toggleChild,
   }
