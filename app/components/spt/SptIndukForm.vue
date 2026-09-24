@@ -153,9 +153,14 @@ defineProps<{
       <KpQuestion label="7. Penghasilan neto fiskal setelah fasilitas pajak (4 - 5 - 6)">
         <KpCurrencyInput id="induk-d7" :model-value="totals.d7" is-disabled />
       </KpQuestion>
-      <KpQuestion label="8. Apakah terdapat kerugian fiskal yang dapat dikompensasikan?" :hints="['Jika “Ya”, isilah Lampiran 7']">
+      <KpQuestion
+        label="8. Apakah terdapat kerugian fiskal yang dapat dikompensasikan?"
+        :hints="totals.d8FromLampiran7 ? ['Diisi dari Lampiran 7 jumlah kolom 8'] : ['Jika “Ya”, isilah Lampiran 7']"
+      >
         <KpYesNo id="induk-d8" v-model="form.d8" />
-        <KpCurrencyInput id="induk-d8-amount" v-model="form.d8Amount" :is-disabled="!form.d8" />
+        <!-- Lampiran 7 with rows provides the amount; otherwise it's entered here. -->
+        <KpCurrencyInput v-if="totals.d8FromLampiran7" id="induk-d8-amount" :model-value="totals.d8" is-disabled />
+        <KpCurrencyInput v-else id="induk-d8-amount" v-model="form.d8Amount" :is-disabled="!form.d8" />
       </KpQuestion>
       <KpQuestion label="9. Penghasilan kena pajak (7 - 8)">
         <KpCurrencyInput id="induk-d9" :model-value="totals.d9" is-disabled />
@@ -176,9 +181,14 @@ defineProps<{
 
     <!-- E. Pengurang PPh terutang -->
     <KpFormSection id="induk-e" title="E. Pengurang PPh terutang">
-      <KpQuestion label="13. Apakah terdapat kredit pajak yang dibayarkan di luar negeri dan/atau dipotong/pungut oleh pihak lain?" :hints="['Jika “Ya”, isilah Lampiran 3']">
+      <KpQuestion
+        label="13. Apakah terdapat kredit pajak yang dibayarkan di luar negeri dan/atau dipotong/pungut oleh pihak lain?"
+        :hints="totals.e13FromLampiran3 ? ['Diisi dari Lampiran 3 (3A jumlah kolom 10 + 3B jumlah kolom 6)'] : ['Jika “Ya”, isilah Lampiran 3']"
+      >
         <KpYesNo id="induk-e13" v-model="form.e13" />
-        <KpCurrencyInput id="induk-e13-amount" v-model="form.e13Amount" :is-disabled="!form.e13" />
+        <!-- Lampiran 3 with rows provides the amount; otherwise it's entered here. -->
+        <KpCurrencyInput v-if="totals.e13FromLampiran3" id="induk-e13-amount" :model-value="totals.e13" is-disabled />
+        <KpCurrencyInput v-else id="induk-e13-amount" v-model="form.e13Amount" :is-disabled="!form.e13" />
       </KpQuestion>
       <KpQuestion label="14. Angsuran PPh Pasal 25">
         <KpCurrencyInput id="induk-e14" v-model="form.e14Amount" />

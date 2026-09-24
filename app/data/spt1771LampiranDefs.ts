@@ -1110,10 +1110,26 @@ export function lampiranDef(section: string, year: number): LampiranDef | undefi
   return defs[section]
 }
 
-/** Lampiran 8 item 4 — used as SPT Induk D.12 when tarif (c) is chosen. */
-export function lampiran8Total(section: Record<string, unknown> | undefined, pkp: number): number {
-  const v = section ? blockValues(section as never, 'pasal31e') : {}
-  return hitungLampiran8(num(v.bruto), pkp).total
+/** Lampiran amounts that fill SPT Induk. `null` = that lampiran has no rows yet (Induk stays manual). */
+export interface LampiranLinks {
+  /** Lampiran 8 angka 1 — D.12 uses Lampiran 8 when tarif (c) and this is filled. */
+  pasal31eBruto: number
+  /** E.13 — Lampiran 3A jumlah kolom 10 + Lampiran 3B jumlah kolom 6. */
+  kreditLampiran3: number | null
+  /** D.8 — Lampiran 7 jumlah kolom 8 (kompensasi kerugian tahun pajak ini). */
+  kompensasiLampiran7: number | null
+}
+
+export function lampiranLinks(lampiran: Record<string, SectionData>): LampiranLinks {
+  const l3 = lampiran['lampiran-3'] ?? {}
+  const l3a = tableRows(l3, 'luarNegeri')
+  const l3b = tableRows(l3, 'dipotong')
+  const l7 = tableRows(lampiran['lampiran-7'] ?? {}, 'kompensasi')
+  return {
+    pasal31eBruto: num(blockValues(lampiran['lampiran-8'] ?? {}, 'pasal31e').bruto),
+    kreditLampiran3: l3a.length || l3b.length ? sumColumn(l3a, 'kredit') + sumColumn(l3b, 'pph') : null,
+    kompensasiLampiran7: l7.length ? sumColumn(l7, 'kIni') : null,
+  }
 }
 
 const ALL_SECTIONS = [

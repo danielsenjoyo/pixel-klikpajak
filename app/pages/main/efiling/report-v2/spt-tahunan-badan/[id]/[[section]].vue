@@ -13,9 +13,8 @@ import {
 } from '@mekari/pixel3'
 import blankSlateImage from '~/assets/images/blankslate-spt.png'
 import { missingLampiran, sectionStates } from '~/data/spt1771Checkpoints'
-import { blockValues, num } from '~/data/spt1771Engine'
 import { computeInduk, missingFields } from '~/data/spt1771Induk'
-import { lampiranDef } from '~/data/spt1771LampiranDefs'
+import { lampiranDef, lampiranLinks } from '~/data/spt1771LampiranDefs'
 import { SEKTOR_USAHA, penghasilanNetoFiskal } from '~/data/spt1771Lampiran1'
 import { LIST_PATH, detailPath, findSection, isLocked, masaLabel } from '~/data/sptTahunanBadan'
 
@@ -49,8 +48,7 @@ const isPembetulan = computed(() => (spt.value?.revision ?? 0) > 0)
 const isReadOnly = computed(() => !!spt.value && isLocked(spt.value))
 const sektorLabel = computed(() => SEKTOR_USAHA.find(s => s.value === draft.value.lampiran1.sektor)?.label ?? '')
 
-const pasal31eBruto = computed(() => num(blockValues(draft.value.lampiran['lampiran-8'] ?? {}, 'pasal31e').bruto))
-const totals = computed(() => computeInduk(draft.value.induk, penghasilanNetoFiskal(draft.value.lampiran1), isPembetulan.value, pasal31eBruto.value))
+const totals = computed(() => computeInduk(draft.value.induk, penghasilanNetoFiskal(draft.value.lampiran1), isPembetulan.value, lampiranLinks(draft.value.lampiran)))
 const indukMissing = computed(() => missingFields(draft.value.induk, totals.value))
 const states = computed(() => sectionStates({
   induk: draft.value.induk,
