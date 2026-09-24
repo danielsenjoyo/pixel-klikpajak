@@ -24,13 +24,13 @@ body {
   background: var(--mp-colors-background-surface);
 }
 
-/* Square icon-only header button (source: MpButtonIcon, which Pixel 3 doesn't ship). */
+/* Square icon-only header button (source: Pixel 1 MpButtonIcon md = 40px; Pixel 3 doesn't ship one). */
 .kp-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border: 0;
   border-radius: var(--mp-radii-md);
   background: transparent;

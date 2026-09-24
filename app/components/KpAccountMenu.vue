@@ -30,7 +30,7 @@ function pickCompany(id: number, close: () => void) {
   >
     <MpPopoverTrigger>
       <button type="button" class="kp-account" aria-label="Buka menu akun">
-        <MpAvatar :name="company.name" size="md" variant-color="pink" />
+        <MpAvatar :name="company.name" size="lg" variant-color="pink" />
         <span class="kp-account__meta">
           <MpText weight="semiBold" is-truncated>{{ company.name }}</MpText>
           <MpText size="body-small" color="text.secondary">{{ company.npwp }}</MpText>
