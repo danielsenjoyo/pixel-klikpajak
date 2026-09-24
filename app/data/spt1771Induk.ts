@@ -2,7 +2,7 @@
  * SPT Tahunan PPh Badan — SPT Induk form model + calculations.
  * Fields and numbering follow Figma "SPT / induk" (sections A–J).
  */
-import { hitungLampiran8, type LampiranLinks } from '~/data/spt1771LampiranDefs'
+import { hitungLampiran8, litbangDimanfaatkan, type LampiranLinks } from '~/data/spt1771LampiranDefs'
 import { n } from '~/utils/currency'
 
 export type YesNo = boolean
@@ -175,50 +175,69 @@ export function emptyInduk(prefill: Partial<SptIndukData> = {}): SptIndukData {
   }
 }
 
+/** Induk amounts a filled lampiran provides (the Ya/Tidak question still gates them). */
+export const LINKED_AMOUNTS = ['c2', 'c3', 'd5', 'd6', 'd8', 'd10', 'e13', 'e16'] as const
+export type LinkedKey = typeof LINKED_AMOUNTS[number]
+
+/** Hint shown under an Induk amount while it comes from its lampiran. */
+export const LINK_SOURCE: Record<LinkedKey, string> = {
+  c2: 'Diisi dari Lampiran 4A jumlah dasar pengenaan pajak',
+  c3: 'Diisi dari Lampiran 4B jumlah penghasilan bruto',
+  d5: 'Diisi dari Lampiran 13A angka 5b',
+  d6: 'Diisi dari Lampiran 13B bagian II angka 2',
+  d8: 'Diisi dari Lampiran 7 jumlah kolom 8',
+  d10: 'Diisi dari Lampiran 13B bagian IV angka 5',
+  e13: 'Diisi dari Lampiran 3 (3A jumlah kolom 10 + 3B jumlah kolom 6)',
+  e16: 'Diisi dari Lampiran 13C jumlah fasilitas pengurangan PPh terutang',
+}
+
 export interface IndukTotals {
   d4: number
   d7: number
-  /** D.8 kompensasi kerugian fiskal (0 when answered Tidak). */
-  d8: number
-  /** D.8 comes from Lampiran 7 jumlah kolom 8. */
-  d8FromLampiran7: boolean
   d9: number
   /** Base for D.12: 9 - 10. */
   pkp: number
   d12: number
   /** D.12 comes from Lampiran 8 angka 4 (tarif c with peredaran bruto filled). */
   d12FromLampiran8: boolean
-  /** E.13 kredit pajak luar negeri / dipotong pihak lain (0 when answered Tidak). */
-  e13: number
-  /** E.13 comes from Lampiran 3 (3A kolom 10 + 3B kolom 6). */
-  e13FromLampiran3: boolean
   f17a: number
   f17c: number
   f18b: number
   isLebihBayar: boolean
+  /** Effective linkable amounts (0 when the question is answered Tidak). */
+  amount: Record<LinkedKey, number>
+  /** True while the amount comes from its lampiran (Ya + lampiran has data). */
+  linked: Record<LinkedKey, boolean>
 }
 
 /** Amount only counts when its "Ya" question is answered Ya. */
 const when = (flag: boolean, amount: number | null) => (flag ? n(amount) : 0)
 
-/** Amounts a filled lampiran provides replace the matching manual Induk entry. */
+/** A lampiran with data replaces the matching manual Induk amount. */
 export function computeInduk(d: SptIndukData, penghasilanNeto: number, isPembetulan: boolean, links: Partial<LampiranLinks> = {}): IndukTotals {
+  const amount = {} as Record<LinkedKey, number>
+  const linked = {} as Record<LinkedKey, boolean>
+  const take = (key: LinkedKey, fromLampiran: number | null | undefined): number => {
+    const flag = d[key]
+    linked[key] = flag && fromLampiran != null
+    amount[key] = linked[key] ? fromLampiran! : when(flag, d[`${key}Amount`])
+    return amount[key]
+  }
+
+  take('c2', links.c2)
+  take('c3', links.c3)
   const d4 = penghasilanNeto
-  const d7 = d4 - when(d.d5, d.d5Amount) - when(d.d6, d.d6Amount)
-  const d8FromLampiran7 = d.d8 && links.kompensasiLampiran7 != null
-  const d8 = when(d.d8, d8FromLampiran7 ? links.kompensasiLampiran7! : d.d8Amount)
-  const d9 = d7 - d8
-  const pkp = d9 - when(d.d10, d.d10Amount)
+  const d7 = d4 - take('d5', links.d5) - take('d6', links.d6)
+  const d9 = d7 - take('d8', links.d8)
+  const pkp = d9 - take('d10', links.litbangBelum == null ? null : litbangDimanfaatkan(links.litbangBelum, d9))
   const rate = TARIF_OPTIONS.find(t => t.value === d.tarif)?.rate ?? 0.22
   const pasal31eBruto = links.pasal31eBruto ?? 0
   const d12FromLampiran8 = d.tarif === 'c' && pasal31eBruto > 0
   const d12 = Math.max(0, d12FromLampiran8 ? hitungLampiran8(pasal31eBruto, pkp).total : Math.round(rate * pkp))
-  const e13FromLampiran3 = d.e13 && links.kreditLampiran3 != null
-  const e13 = when(d.e13, e13FromLampiran3 ? links.kreditLampiran3! : d.e13Amount)
-  const f17a = d12 - e13 - n(d.e14Amount) - n(d.e15Amount) - when(d.e16, d.e16Amount)
+  const f17a = d12 - take('e13', links.e13) - n(d.e14Amount) - n(d.e15Amount) - take('e16', links.e16)
   const f17c = f17a - when(d.f17b, d.f17bAmount)
   const f18b = isPembetulan ? f17a - n(d.f18aAmount) : 0
-  return { d4, d7, d8, d8FromLampiran7, d9, pkp, d12, d12FromLampiran8, e13, e13FromLampiran3, f17a, f17c, f18b, isLebihBayar: f17c < 0 || f18b < 0 }
+  return { d4, d7, d9, pkp, d12, d12FromLampiran8, f17a, f17c, f18b, isLebihBayar: f17c < 0 || f18b < 0, amount, linked }
 }
 
 /** Fields that must be filled before the SPT can be reported. */

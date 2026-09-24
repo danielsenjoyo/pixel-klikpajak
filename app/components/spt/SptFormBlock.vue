@@ -3,12 +3,14 @@ import { MpTable, MpTableBody, MpTableCell, MpTableContainer, MpTableHead, MpTab
 import type { BlockValues, Ctx, FormBlock, FormItem } from '~/data/spt1771Engine'
 
 // Calculation sheet (Figma "No. | Rincian | Nilai"): numbered rows with a Nilai control;
-// computed rows are grey read-only amounts, heading rows have no control.
+// computed rows are grey read-only amounts, heading rows have no control. A `linked` row is
+// read-only while another lampiran provides its value, otherwise entered here.
 const props = defineProps<{ block: FormBlock, ctx: Ctx, idPrefix: string, isReadOnly?: boolean }>()
 const values = defineModel<BlockValues>({ required: true })
 
 const headers = computed(() => props.block.headers ?? ['No.', 'Rincian', 'Nilai'])
 const isComputed = (item: FormItem) => item.type === 'computed' || !!item.compute
+const linkedValue = (item: FormItem) => item.linked?.(props.ctx) ?? null
 </script>
 
 <template>
@@ -49,9 +51,9 @@ const isComputed = (item: FormItem) => item.type === 'computed' || !!item.comput
             <MpTableCell as="td" class="spt-form-block__value">
               <template v-if="item.key && !item.heading">
                 <KpCurrencyInput
-                  v-if="isComputed(item)"
+                  v-if="isComputed(item) || linkedValue(item) !== null"
                   :id="`${idPrefix}-${item.key}`"
-                  :model-value="item.compute ? item.compute(values, ctx) : 0"
+                  :model-value="item.compute ? item.compute(values, ctx) : linkedValue(item) ?? 0"
                   size="sm"
                   is-disabled
                 />

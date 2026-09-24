@@ -14,21 +14,27 @@ import {
   OPINI_AUDITOR,
   PERIODE_PEMBUKUAN,
   PERNYATAAN_TRANSAKSI,
+  LINK_SOURCE,
   TARIF_OPTIONS,
   type IndukTotals,
+  type LinkedKey,
   type SptIndukData,
 } from '~/data/spt1771Induk'
 
 // SPT Induk (Figma "SPT / induk", sections A–J). Amounts behind a "Ya" question are
 // disabled until Ya; computed lines (4, 7, 9, 12, 17a, 17c, 18b, 21j) are read-only.
+// Amounts a filled lampiran provides (C.2, C.3, D.5, D.6, D.8, D.10, E.13, E.16) turn
+// read-only with a "Diisi dari Lampiran …" hint.
 const form = defineModel<SptIndukData>({ required: true })
 
-defineProps<{
+const props = defineProps<{
   totals: IndukTotals
   year: number
   isPembetulan: boolean
   sektorLabel: string
 }>()
+
+const linkedHints = (key: LinkedKey, hints: string[]) => (props.totals.linked[key] ? [LINK_SOURCE[key]] : hints)
 </script>
 
 <template>
@@ -127,13 +133,13 @@ defineProps<{
       <KpQuestion label="1. b. Apakah wajib pajak semata-mata hanya penghasilan dari usaha dengan peredaran bruto tertentu yang dikenakan PPh Final?">
         <KpYesNo id="induk-c1b" v-model="form.c1b" />
       </KpQuestion>
-      <KpQuestion label="2. Apakah wajib pajak menerima atau memperoleh penghasilan yang dikenakan PPh Final?" :hints="['Jika “Ya”, isilah Lampiran 4 bagian A']">
+      <KpQuestion label="2. Apakah wajib pajak menerima atau memperoleh penghasilan yang dikenakan PPh Final?" :hints="linkedHints('c2', ['Jika “Ya”, isilah Lampiran 4 bagian A'])">
         <KpYesNo id="induk-c2" v-model="form.c2" />
-        <KpCurrencyInput id="induk-c2-amount" v-model="form.c2Amount" :is-disabled="!form.c2" />
+        <SptLinkedAmount id="induk-c2-amount" v-model="form.c2Amount" :linked="totals.linked.c2" :value="totals.amount.c2" :is-disabled="!form.c2" />
       </KpQuestion>
-      <KpQuestion label="3. Apakah wajib pajak menerima atau memperoleh penghasilan yang tidak termasuk objek pajak?" :hints="['Jika “Ya”, isilah Lampiran 4 bagian B']">
+      <KpQuestion label="3. Apakah wajib pajak menerima atau memperoleh penghasilan yang tidak termasuk objek pajak?" :hints="linkedHints('c3', ['Jika “Ya”, isilah Lampiran 4 bagian B'])">
         <KpYesNo id="induk-c3" v-model="form.c3" />
-        <KpCurrencyInput id="induk-c3-amount" v-model="form.c3Amount" :is-disabled="!form.c3" />
+        <SptLinkedAmount id="induk-c3-amount" v-model="form.c3Amount" :linked="totals.linked.c3" :value="totals.amount.c3" :is-disabled="!form.c3" />
       </KpQuestion>
     </KpFormSection>
 
@@ -142,32 +148,27 @@ defineProps<{
       <KpQuestion label="4. Penghasilan neto fiskal sebelum fasilitas pajak" :hints="['Diisi dari Lampiran 1 (sesuai sektor usaha) bagian A kolom (10)']">
         <KpCurrencyInput id="induk-d4" :model-value="totals.d4" is-disabled />
       </KpQuestion>
-      <KpQuestion label="5. Apakah wajib pajak memperoleh fasilitas perpajakan dalam rangka penanaman modal berupa pengurangan penghasilan neto?" :hints="['Jika “Ya”, isilah Lampiran 13A']">
+      <KpQuestion label="5. Apakah wajib pajak memperoleh fasilitas perpajakan dalam rangka penanaman modal berupa pengurangan penghasilan neto?" :hints="linkedHints('d5', ['Jika “Ya”, isilah Lampiran 13A'])">
         <KpYesNo id="induk-d5" v-model="form.d5" />
-        <KpCurrencyInput id="induk-d5-amount" v-model="form.d5Amount" :is-disabled="!form.d5" />
+        <SptLinkedAmount id="induk-d5-amount" v-model="form.d5Amount" :linked="totals.linked.d5" :value="totals.amount.d5" :is-disabled="!form.d5" />
       </KpQuestion>
-      <KpQuestion label="6. Apakah wajib pajak memperoleh fasilitas pengurangan penghasilan bruto untuk kegiatan praktik kerja, pemagangan, dan/atau pembelajaran dalam rangka pembinaan dan pengembangan sumber daya manusia berbasis kompetensi tertentu?" :hints="['Jika “Ya”, isilah Lampiran 13B']">
+      <KpQuestion label="6. Apakah wajib pajak memperoleh fasilitas pengurangan penghasilan bruto untuk kegiatan praktik kerja, pemagangan, dan/atau pembelajaran dalam rangka pembinaan dan pengembangan sumber daya manusia berbasis kompetensi tertentu?" :hints="linkedHints('d6', ['Jika “Ya”, isilah Lampiran 13B'])">
         <KpYesNo id="induk-d6" v-model="form.d6" />
-        <KpCurrencyInput id="induk-d6-amount" v-model="form.d6Amount" :is-disabled="!form.d6" />
+        <SptLinkedAmount id="induk-d6-amount" v-model="form.d6Amount" :linked="totals.linked.d6" :value="totals.amount.d6" :is-disabled="!form.d6" />
       </KpQuestion>
       <KpQuestion label="7. Penghasilan neto fiskal setelah fasilitas pajak (4 - 5 - 6)">
         <KpCurrencyInput id="induk-d7" :model-value="totals.d7" is-disabled />
       </KpQuestion>
-      <KpQuestion
-        label="8. Apakah terdapat kerugian fiskal yang dapat dikompensasikan?"
-        :hints="totals.d8FromLampiran7 ? ['Diisi dari Lampiran 7 jumlah kolom 8'] : ['Jika “Ya”, isilah Lampiran 7']"
-      >
+      <KpQuestion label="8. Apakah terdapat kerugian fiskal yang dapat dikompensasikan?" :hints="linkedHints('d8', ['Jika “Ya”, isilah Lampiran 7'])">
         <KpYesNo id="induk-d8" v-model="form.d8" />
-        <!-- Lampiran 7 with rows provides the amount; otherwise it's entered here. -->
-        <KpCurrencyInput v-if="totals.d8FromLampiran7" id="induk-d8-amount" :model-value="totals.d8" is-disabled />
-        <KpCurrencyInput v-else id="induk-d8-amount" v-model="form.d8Amount" :is-disabled="!form.d8" />
+        <SptLinkedAmount id="induk-d8-amount" v-model="form.d8Amount" :linked="totals.linked.d8" :value="totals.amount.d8" :is-disabled="!form.d8" />
       </KpQuestion>
       <KpQuestion label="9. Penghasilan kena pajak (7 - 8)">
         <KpCurrencyInput id="induk-d9" :model-value="totals.d9" is-disabled />
       </KpQuestion>
-      <KpQuestion label="10. Apakah wajib pajak memperoleh fasilitas pengurangan penghasilan bruto untuk kegiatan penelitian dan pengembangan?" :hints="['Jika “Ya”, isilah Lampiran 13B']">
+      <KpQuestion label="10. Apakah wajib pajak memperoleh fasilitas pengurangan penghasilan bruto untuk kegiatan penelitian dan pengembangan?" :hints="linkedHints('d10', ['Jika “Ya”, isilah Lampiran 13B'])">
         <KpYesNo id="induk-d10" v-model="form.d10" />
-        <KpCurrencyInput id="induk-d10-amount" v-model="form.d10Amount" :is-disabled="!form.d10" />
+        <SptLinkedAmount id="induk-d10-amount" v-model="form.d10Amount" :linked="totals.linked.d10" :value="totals.amount.d10" :is-disabled="!form.d10" />
       </KpQuestion>
       <KpQuestion label="11. Tarif pajak:" :hints="['Jika memilih c, isilah Lampiran 8']">
         <div class="spt-induk__radios spt-induk__radios--stack">
@@ -181,14 +182,9 @@ defineProps<{
 
     <!-- E. Pengurang PPh terutang -->
     <KpFormSection id="induk-e" title="E. Pengurang PPh terutang">
-      <KpQuestion
-        label="13. Apakah terdapat kredit pajak yang dibayarkan di luar negeri dan/atau dipotong/pungut oleh pihak lain?"
-        :hints="totals.e13FromLampiran3 ? ['Diisi dari Lampiran 3 (3A jumlah kolom 10 + 3B jumlah kolom 6)'] : ['Jika “Ya”, isilah Lampiran 3']"
-      >
+      <KpQuestion label="13. Apakah terdapat kredit pajak yang dibayarkan di luar negeri dan/atau dipotong/pungut oleh pihak lain?" :hints="linkedHints('e13', ['Jika “Ya”, isilah Lampiran 3'])">
         <KpYesNo id="induk-e13" v-model="form.e13" />
-        <!-- Lampiran 3 with rows provides the amount; otherwise it's entered here. -->
-        <KpCurrencyInput v-if="totals.e13FromLampiran3" id="induk-e13-amount" :model-value="totals.e13" is-disabled />
-        <KpCurrencyInput v-else id="induk-e13-amount" v-model="form.e13Amount" :is-disabled="!form.e13" />
+        <SptLinkedAmount id="induk-e13-amount" v-model="form.e13Amount" :linked="totals.linked.e13" :value="totals.amount.e13" :is-disabled="!form.e13" />
       </KpQuestion>
       <KpQuestion label="14. Angsuran PPh Pasal 25">
         <KpCurrencyInput id="induk-e14" v-model="form.e14Amount" />
@@ -196,9 +192,9 @@ defineProps<{
       <KpQuestion label="15. Pokok pajak atas STP PPh Pasal 25">
         <KpCurrencyInput id="induk-e15" v-model="form.e15Amount" />
       </KpQuestion>
-      <KpQuestion label="16. Apakah wajib pajak memperoleh fasilitas pengurangan PPh terutang?" :hints="['Jika “Ya”, isilah Lampiran 13C']">
+      <KpQuestion label="16. Apakah wajib pajak memperoleh fasilitas pengurangan PPh terutang?" :hints="linkedHints('e16', ['Jika “Ya”, isilah Lampiran 13C'])">
         <KpYesNo id="induk-e16" v-model="form.e16" />
-        <KpCurrencyInput id="induk-e16-amount" v-model="form.e16Amount" :is-disabled="!form.e16" />
+        <SptLinkedAmount id="induk-e16-amount" v-model="form.e16Amount" :linked="totals.linked.e16" :value="totals.amount.e16" :is-disabled="!form.e16" />
       </KpQuestion>
     </KpFormSection>
 

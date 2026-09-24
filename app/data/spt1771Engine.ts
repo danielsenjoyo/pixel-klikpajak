@@ -20,12 +20,16 @@ export type SectionData = Record<string, Row[] | BlockValues>
 export interface Ctx {
   /** Tax year of the SPT (e.g. 2023). */
   year: number
-  /** SPT Induk D.9 — penghasilan kena pajak. */
+  /** SPT Induk 9 - 10 — penghasilan kena pajak the tarif applies to. */
   pkp: number
+  /** SPT Induk D.9 — penghasilan kena pajak before the D.10 facility. */
+  pkpAngka9: number
   /** SPT Induk D.4 — penghasilan neto fiskal. */
   penghasilanNeto: number
   /** All blocks of the current lampiran section (for cross-block totals). */
   section: SectionData
+  /** Every lampiran section (for values filled from another lampiran). */
+  lampiran: Record<string, SectionData>
 }
 
 export interface FieldDef {
@@ -77,6 +81,8 @@ export interface FormItem {
   compute?: (values: BlockValues, ctx: Ctx) => number
   /** Grey formula hint under the label. */
   hint?: string
+  /** Value from another lampiran; while it returns a number the row is read-only. */
+  linked?: (ctx: Ctx) => number | null
   indent?: 1 | 2
   /** Heading rows are bold with no control. */
   heading?: boolean

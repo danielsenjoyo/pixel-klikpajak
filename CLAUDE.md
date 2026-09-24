@@ -74,6 +74,10 @@ The layout adds no content padding — pages own it.
 Lampiran 2–14 are config, not components: add or change one in `spt1771LampiranDefs.ts`
 (table columns with `group` for two-row headers, `compute` for read-only values, `mode: 'drawer'`
 for "Tambah data" drawers). If an Induk answer requires it, add the rule to `requiredLampiran()`.
+Lampiran amounts that fill SPT Induk go through `lampiranLinks()` → `computeInduk()`: `null`
+means "lampiran empty, keep the manual entry"; the Induk field then shows `SptLinkedAmount`
+read-only with its `LINK_SOURCE` hint. Values from another lampiran use `FormItem.linked`
+(reads `ctx.lampiran`).
 
 Pages mirror source URLs (`/main/efaktur-v2/out` → `app/pages/main/efaktur-v2/out/index.vue`),
 so every nav link resolves and a ported page simply replaces the placeholder.

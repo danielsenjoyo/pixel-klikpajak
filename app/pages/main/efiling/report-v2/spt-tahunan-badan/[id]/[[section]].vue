@@ -65,7 +65,13 @@ const status = computed(() => {
 })
 
 const lampiranPage = computed(() => (spt.value ? lampiranDef(sectionKey.value, spt.value.year) : undefined))
-const lampiranCtx = computed(() => ({ year: spt.value?.year ?? 0, pkp: totals.value.pkp, penghasilanNeto: totals.value.d4 }))
+const lampiranCtx = computed(() => ({
+  year: spt.value?.year ?? 0,
+  pkp: totals.value.pkp,
+  pkpAngka9: totals.value.d9,
+  penghasilanNeto: totals.value.d4,
+  lampiran: draft.value.lampiran,
+}))
 
 const isNavCollapsed = ref(false)
 const hrefFor = (key: string) => detailPath({ id }, key)
