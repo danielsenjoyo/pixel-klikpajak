@@ -1,0 +1,19 @@
+{
+  "name": "pixel-klikpajak",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@mekari/pixel3": "latest",
+    "@mekari/pixel3-postcss": "latest",
+    "nuxt": "^4.3.0",
+    "vue": "^3.5.27",
+    "vue-router": "^4.6.4"
+  }
+}

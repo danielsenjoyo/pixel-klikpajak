@@ -1,0 +1,26 @@
+/*
+ * App-wide shell styles. Colours, spacing, radii and type come from Pixel
+ * token v2.4 CSS variables (--mp-colors-*, --mp-spacing-*, …), which switch
+ * with data-panda-theme — never hardcode hex values here.
+ */
+
+:root {
+  --kp-header-height: 64px;
+  --kp-content-max-width: 1440px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--mp-fonts-body);
+  -webkit-font-smoothing: antialiased;
+  color: var(--mp-colors-text-default);
+  background: var(--mp-colors-background-surface);
+}

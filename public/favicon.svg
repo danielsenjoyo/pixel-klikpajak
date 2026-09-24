@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24px" height="24px" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 54.1 (76490) - https://sketchapp.com -->
+    <title>logo</title>
+    <desc>Created with Sketch.</desc>
+    <defs>
+        <linearGradient x1="39.6636036%" y1="10.5784116%" x2="74.9661004%" y2="81.8940107%" id="linearGradient-1">
+            <stop stop-color="#F48231" offset="0%"></stop>
+            <stop stop-color="#FFBD77" offset="100%"></stop>
+        </linearGradient>
+        <linearGradient x1="38.4100498%" y1="47.9339688%" x2="57.2770967%" y2="37.9040713%" id="linearGradient-2">
+            <stop stop-color="#F58232" offset="0%"></stop>
+            <stop stop-color="#FFBD77" stop-opacity="0" offset="100%"></stop>
+        </linearGradient>
+    </defs>
+    <g id="symbols" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="header-bayar" transform="translate(-375.000000, -34.000000)">
+            <g id="logo" transform="translate(375.000000, 34.000000)">
+                <g id="icon" transform="translate(0.000000, 0.000152)">
+                    <path d="M15.4696543,0.874666667 L8.2632716,11.122642 L4.03166667,6.29577778 C3.28303704,5.42414815 2.24183951,5.13816049 1.312,5.6747037 L1.312,5.6747037 C0.382666667,6.21175309 0.121987654,7.2737037 0.489975309,8.34020988 L0.489975309,8.34020988 L4.11974074,18.822037 C4.83091358,20.6285679 6.27755556,22.0038395 8.2632716,22.0038395 L8.2632716,22.0038395 C10.2702469,22.0038395 11.6394444,20.4843086 12.4224938,18.763321 L12.4224938,18.763321 L19.0118519,2.91909877 C19.4324815,1.86879012 19.1186543,0.790641975 18.189321,0.253592593 L18.189321,0.253592593 C17.8441111,0.0845308642 17.4913086,0 17.1491358,0 L17.1491358,0 C16.5128765,0 15.9140741,0.292061728 15.4696543,0.874666667" id="Fill-53" fill="url(#linearGradient-1)"></path>
+                    <polygon id="Fill-56" fill="url(#linearGradient-2)" points="8.2632716 11.122642 13.3158889 16.6146173 10.943963 7.30964198"></polygon>
+                </g>
+            </g>
+        </g>
+    </g>
+</svg>
