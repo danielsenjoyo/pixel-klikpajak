@@ -13,6 +13,13 @@ import {
   MpFormLabel,
   MpIcon,
   MpInput,
+  MpModal,
+  MpModalBody,
+  MpModalCloseButton,
+  MpModalContent,
+  MpModalFooter,
+  MpModalHeader,
+  MpModalOverlay,
   MpTable,
   MpTableBody,
   MpTableCell,
@@ -26,6 +33,7 @@ import blankSlateImage from '~/assets/images/blankslate-spt.png'
 import {
   formatValue,
   headerGroups,
+  isRowFilled,
   newRowId,
   num,
   type Ctx,
@@ -119,8 +127,31 @@ function saveDrawer() {
   toast.notify({ id: `toast-${props.idPrefix}-saved`, variant: 'success', title: 'Data berhasil disimpan' })
 }
 
-function deleteRow(row: Row) {
-  removeRow(row.id)
+// ── Delete confirmation (same pattern as "Hapus SPT" on the index page) ──────
+const deleteTarget = ref<{ row: Row, index: number } | null>(null)
+
+/** "Acme Holdings Pte Ltd" — the row's first column, so the modal names what is deleted. */
+const deleteName = computed(() => {
+  const t = deleteTarget.value
+  const first = props.block.columns[0]
+  if (!t || !first) return ''
+  const v = cellValue(first, t.row)
+  return v === null || v === undefined || v === '' ? '' : formatValue(first.derive ? 'text' : first.type, v, first)
+})
+
+/** Rows with data ask first; an empty row added by mistake just goes. */
+function askDelete(row: Row, index: number) {
+  if (!isRowFilled(row)) {
+    removeRow(row.id)
+    return
+  }
+  deleteTarget.value = { row, index }
+}
+
+function confirmDelete() {
+  if (!deleteTarget.value) return
+  removeRow(deleteTarget.value.row.id)
+  deleteTarget.value = null
   toast.notify({ id: `toast-${props.idPrefix}-deleted`, variant: 'success', title: 'Data berhasil dihapus' })
 }
 </script>
@@ -221,7 +252,7 @@ function deleteRow(row: Row) {
               <MpTableCell v-if="hasActions" as="td" class="spt-table-block__actions">
                 <div v-if="block.mode === 'drawer'" class="spt-table-block__row-actions">
                   <MpButton :id="`${idPrefix}-${i}-edit`" variant="ghost" size="sm" @click="openDrawer(r)">Ubah</MpButton>
-                  <MpButton :id="`${idPrefix}-${i}-delete`" variant="ghost" size="sm" @click="deleteRow(r)">Hapus</MpButton>
+                  <MpButton :id="`${idPrefix}-${i}-delete`" variant="ghost" size="sm" @click="askDelete(r, i)">Hapus</MpButton>
                 </div>
                 <button
                   v-else
@@ -229,7 +260,7 @@ function deleteRow(row: Row) {
                   type="button"
                   class="kp-icon-btn spt-table-block__delete"
                   :aria-label="`Hapus baris ${i + 1}`"
-                  @click="removeRow(r.id)"
+                  @click="askDelete(r, i)"
                 >
                   <MpIcon name="delete" size="sm" />
                 </button>
@@ -272,6 +303,28 @@ function deleteRow(row: Row) {
         <dd>{{ formatValue(s.format ?? 'rp', s.value(rows, ctx)) }}</dd>
       </div>
     </dl>
+
+    <!-- Hapus data confirmation -->
+    <MpModal :id="`${idPrefix}-delete-modal`" :is-open="!!deleteTarget" size="sm" @close="deleteTarget = null">
+      <MpModalContent>
+        <MpModalHeader>
+          Hapus data
+          <MpModalCloseButton />
+        </MpModalHeader>
+        <MpModalBody>
+          <MpText v-if="deleteTarget">
+            Data baris {{ deleteTarget.index + 1 }}<template v-if="deleteName"> ({{ deleteName }})</template> yang dihapus tidak dapat dikembalikan.
+          </MpText>
+        </MpModalBody>
+        <MpModalFooter>
+          <div class="spt-table-block__modal-actions">
+            <MpButton :id="`${idPrefix}-delete-cancel`" variant="ghost" @click="deleteTarget = null">Batalkan</MpButton>
+            <MpButton :id="`${idPrefix}-delete-submit`" variant="danger" @click="confirmDelete">Hapus</MpButton>
+          </div>
+        </MpModalFooter>
+      </MpModalContent>
+      <MpModalOverlay />
+    </MpModal>
 
     <!-- Tambah / Ubah data drawer -->
     <MpDrawer :id="`${idPrefix}-drawer`" :is-open="!!drawerRow" size="lg" @close="closeDrawer">
@@ -453,6 +506,7 @@ function deleteRow(row: Row) {
   clear: both;
 }
 
+.spt-table-block__modal-actions,
 .spt-table-block__drawer-actions {
   display: flex;
   justify-content: flex-end;
