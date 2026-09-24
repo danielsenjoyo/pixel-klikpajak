@@ -12,6 +12,7 @@ import {
   MpFormErrorMessage,
   MpFormLabel,
   MpIcon,
+  MpInput,
   MpTable,
   MpTableBody,
   MpTableCell,
@@ -47,7 +48,7 @@ const hasActions = computed(() => !props.isReadOnly)
 const leadCols = computed(() => (numbered.value ? 1 : 0))
 
 const cellWidth = (c: FieldDef) => `${c.width ?? (c.type === 'currency' || c.type === 'usd' ? 184 : 160)}px`
-const cellValue = (c: FieldDef, r: Row) => (c.compute ? c.compute(r, props.ctx) : r[c.key])
+const cellValue = (c: FieldDef, r: Row) => (c.compute ? c.compute(r, props.ctx) : c.derive ? c.derive(r) : r[c.key])
 const isNumeric = (c: FieldDef) => c.type === 'currency' || c.type === 'usd' || !!c.compute
 
 function columnTotal(c: FieldDef) {
@@ -183,8 +184,15 @@ function deleteRow(row: Row) {
 
               <MpTableCell v-for="c in block.columns" :key="c.key" as="td" :class="{ 'spt-table-block__num': block.mode === 'drawer' && isNumeric(c) }">
                 <template v-if="block.mode === 'inline'">
+                  <MpInput
+                    v-if="c.derive"
+                    :id="`${idPrefix}-${i}-${c.key}`"
+                    :model-value="c.derive(r)"
+                    size="sm"
+                    is-disabled
+                  />
                   <SptField
-                    v-if="!c.compute"
+                    v-else-if="!c.compute"
                     :id="`${idPrefix}-${i}-${c.key}`"
                     v-model="r[c.key]"
                     :type="c.type"
@@ -202,7 +210,7 @@ function deleteRow(row: Row) {
                     is-disabled
                   />
                 </template>
-                <template v-else>{{ formatValue(c.compute ? (c.type === 'usd' ? 'usd' : 'computed') : c.type, cellValue(c, r)) }}</template>
+                <template v-else>{{ formatValue(c.compute ? (c.type === 'usd' ? 'usd' : 'computed') : c.derive ? 'text' : c.type, cellValue(c, r), c) }}</template>
               </MpTableCell>
 
               <MpTableCell v-if="hasActions" as="td" class="spt-table-block__actions">
@@ -279,8 +287,9 @@ function deleteRow(row: Row) {
                 :is-invalid="showErrors && missingRequired.includes(c.key)"
               >
                 <MpFormLabel>{{ c.label.replace(/\s*\(\d+\)$/, '') }}</MpFormLabel>
+                <MpInput v-if="c.derive" :id="`${idPrefix}-f-${c.key}`" :model-value="c.derive(drawerRow)" is-disabled />
                 <SptField
-                  v-if="!c.compute"
+                  v-else-if="!c.compute"
                   :id="`${idPrefix}-f-${c.key}`"
                   v-model="drawerRow[c.key]"
                   :type="c.type"

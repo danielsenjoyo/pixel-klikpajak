@@ -35,8 +35,10 @@ Done so far: **boilerplate only** — shell, nav, layouts, placeholders.
   `spt1771Induk.ts`), plus Lampiran 7 kolom 9 → Lampiran 6 angka 2. Lampiran 13B IV angka 3
   is 1 - 2 (Figma says "1 + 2"; changed on review since angka 2 is already used).
 - Lampiran 5B drawer in Figma is a copy of Lampiran 7's; built from the 5B table instead.
-- Code lists (kode negara, kode objek pajak, kode jenis transaksi…) are free text; replace with
-  selects when the reference data is ported.
+- Code fields are selects backed by mock lists in `app/data/taxCodes.ts` (the source loads them
+  from the backend). Country / currency use real ISO codes (subset); Lampiran 4 objek pajak and
+  jenis penghasilan use placeholder ids (F01…, N01…); swap in DJP's lists when those endpoints
+  are ported. Still free text: Lampiran 9 kode aset, Lampiran 1 kode koreksi fiskal.
 
 ## Phase 1 — Shared foundations (do before any module)
 

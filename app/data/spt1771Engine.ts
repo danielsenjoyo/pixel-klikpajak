@@ -12,6 +12,13 @@ export type FieldType =
   | 'text' | 'id' | 'currency' | 'usd' | 'percent' | 'number'
   | 'year' | 'month' | 'date' | 'select' | 'yesno' | 'checkbox'
 
+/** Select option: stored `value`, shown `label` (plain strings are both). */
+export interface CodeOption { value: string, label: string }
+export type Options = readonly (string | CodeOption)[]
+
+export const normalizeOptions = (options: Options | undefined): CodeOption[] =>
+  (options ?? []).map(o => (typeof o === 'string' ? { value: o, label: o } : o))
+
 export type Row = Record<string, unknown> & { id: string }
 export type BlockValues = Record<string, unknown>
 /** Saved data of one lampiran section: block key → rows (table) or values (others). */
@@ -36,7 +43,11 @@ export interface FieldDef {
   key: string
   label: string
   type: FieldType
-  options?: readonly string[]
+  options?: Options
+  /** Tables show the stored value (e.g. "SGP") instead of the option label. */
+  showValue?: boolean
+  /** Read-only text taken from other fields of the row (e.g. a code's name). */
+  derive?: (values: Record<string, unknown>) => string
   /** Table: two-row header group. Drawer/fields: sub-heading above the field. */
   group?: string
   /** Read-only value computed from the row (table) or block values (fields). */
@@ -77,7 +88,7 @@ export interface FormItem {
   /** Omit for heading-only rows. */
   key?: string
   type?: FieldType | 'computed'
-  options?: readonly string[]
+  options?: Options
   compute?: (values: BlockValues, ctx: Ctx) => number
   /** Grey formula hint under the label. */
   hint?: string
@@ -169,13 +180,16 @@ export function isSectionFilled(def: LampiranDef, data: SectionData | undefined)
 export const newRowId = () => `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 
 /** Read-only display of a value (drawer tables, totals, summaries). */
-export function formatValue(type: FieldType | 'computed' | 'rp' | 'text', value: unknown): string {
+export function formatValue(type: FieldType | 'computed' | 'rp' | 'text', value: unknown, field?: Pick<FieldDef, 'options' | 'showValue'>): string {
   if (type === 'currency' || type === 'computed' || type === 'rp') return formatRp(num(value))
   if (type === 'usd') return `${num(value) < 0 ? '-' : ''}$${formatNumber(Math.abs(num(value)))}`
   if (value === null || value === undefined || value === '') return '-'
   if (type === 'percent') return `${String(value).replace('.', ',')}%`
   if (type === 'yesno') return value ? 'Ya' : 'Tidak'
   if (type === 'checkbox') return value ? 'Ya' : '-'
+  if (type === 'select' && field?.options && !field.showValue) {
+    return normalizeOptions(field.options).find(o => o.value === value)?.label ?? String(value)
+  }
   return String(value)
 }
 

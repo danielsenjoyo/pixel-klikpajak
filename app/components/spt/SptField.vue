@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { MpCheckbox, MpDatePicker, MpInput, MpInputGroup, MpInputRightAddon, MpSelect, MpText } from '@mekari/pixel3'
-import type { FieldType } from '~/data/spt1771Engine'
+import { normalizeOptions, type FieldType, type Options } from '~/data/spt1771Engine'
 
 // One lampiran control, chosen by field type. Used in inline table cells (size sm),
 // the "Tambah data" drawer, form sheets and field groups.
@@ -8,7 +8,7 @@ const props = withDefaults(defineProps<{
   id: string
   type: FieldType
   modelValue?: unknown
-  options?: readonly string[]
+  options?: Options
   label?: string
   placeholder?: string
   size?: 'sm' | 'md'
@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<{
 }>(), { size: 'md', modelValue: null })
 
 const emit = defineEmits<{ 'update:modelValue': [value: unknown] }>()
+const selectOptions = computed(() => normalizeOptions(props.options))
 const asNumber = computed(() => (typeof props.modelValue === 'number' ? props.modelValue : null))
 const asString = computed(() => (props.modelValue == null ? '' : String(props.modelValue)))
 
@@ -97,7 +98,7 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
     @update:model-value="emit('update:modelValue', $event || null)"
   >
     <option value="">{{ placeholder ?? 'Pilih' }}</option>
-    <option v-for="o in options ?? []" :key="o" :value="o">{{ o }}</option>
+    <option v-for="o in selectOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
   </MpSelect>
 
   <KpYesNo

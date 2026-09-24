@@ -56,6 +56,7 @@ app/
   data/spt1771Engine.ts     config types for lampiran (table/form/statements/fields blocks) + helpers
   data/spt1771LampiranDefs.ts  Lampiran 2–14 definitions (from Figma), lampiranDef(), emptyLampiran()
   data/spt1771Checkpoints.ts   done / required / optional per section; required lampiran from Induk
+  data/taxCodes.ts          mock reference lists for lampiran selects (negara, mata uang, objek pajak…)
   composables/useSidebar    collapse state, persisted in localStorage "sidebar" like the source
   data/navigation.ts        sidebar tree + active-module / active-leaf helpers
   data/session.ts           mock user-setting payload (company, NPWP, flags)

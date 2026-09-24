@@ -15,6 +15,18 @@ import {
   type Row,
   type SectionData,
 } from '~/data/spt1771Engine'
+import {
+  BENTUK_HUBUNGAN,
+  JENIS_TRANSAKSI,
+  MATA_UANG,
+  METODE_HARGA,
+  NEGARA,
+  NON_OBJEK_PAJAK,
+  OBJEK_PPH_FINAL,
+  PENGHASILAN_LUAR_NEGERI,
+  codeName,
+  toOptions,
+} from '~/data/taxCodes'
 
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 const METODE_PENYUSUTAN = ['Garis lurus', 'Saldo menurun'] as const
@@ -22,6 +34,10 @@ const KATEGORI_KREDIT = ['Kurang lancar', 'Diragukan', 'Macet'] as const
 
 const sumOf = (key: string) => (rows: Row[]) => rows.reduce((a, r) => a + num(r[key]), 0)
 const text = (key: string, label: string, extra: Partial<FieldDef> = {}): FieldDef => ({ key, label, type: 'text', ...extra })
+/** Select from a reference list (data/taxCodes.ts). `withCode` shows and stores codes like "SGP". */
+const code = (key: string, label: string, list: Parameters<typeof toOptions>[0], withCode: boolean, extra: Partial<FieldDef> = {}): FieldDef =>
+  ({ key, label, type: 'select', options: toOptions(list, withCode), showValue: withCode, width: withCode ? 220 : 260, ...extra })
+const negara = (key: string, label: string, extra: Partial<FieldDef> = {}) => code(key, label, NEGARA, true, { placeholder: 'Pilih negara', ...extra })
 const rp = (key: string, label: string, extra: Partial<FieldDef> = {}): FieldDef => ({ key, label, type: 'currency', ...extra })
 const item = (no: string | undefined, label: string, key?: string, extra: Partial<FormItem> = {}): FormItem => ({ no, label, key, type: key ? 'currency' : undefined, ...extra })
 
@@ -66,7 +82,7 @@ const lampiran2: LampiranDef = {
         columns: [
           text('nama', 'Nama (2)', { width: 200, required: true }),
           text('alamat', 'Alamat (3)', { width: 260 }),
-          text('kodeNegara', 'Kode Negara (4)', { width: 120 }),
+          negara('kodeNegara', 'Kode Negara (4)'),
           { key: 'npwp', label: 'NPWP/TIN (5)', type: 'id', width: 180 },
           text('jabatan', 'Jabatan (6)', { width: 160 }),
           rp('modal', 'Nilai (7)', { group: 'Modal disetor' }),
@@ -91,7 +107,7 @@ const lampiran2: LampiranDef = {
         emptyLabel: 'lampiran 2B',
         columns: [
           text('nama', 'Nama (2)', { required: true, width: 200 }),
-          text('kodeNegara', 'Kode Negara (3)', { width: 120 }),
+          negara('kodeNegara', 'Kode Negara (3)'),
           { key: 'npwp', label: 'NPWP/TIN (4)', type: 'id', width: 180 },
           rp('modal', 'Nilai (5)', { group: 'Penyertaan modal' }),
           { key: 'persen', label: '% (6)', type: 'percent', group: 'Penyertaan modal', width: 100 },
@@ -123,12 +139,12 @@ const lampiran3: LampiranDef = {
         emptyLabel: 'lampiran 3A',
         columns: [
           text('nama', 'Nama (2)', { group: 'Pemotong pajak', required: true, width: 200 }),
-          text('kodeNegara', 'Kode negara (3)', { group: 'Pemotong pajak', width: 120 }),
+          negara('kodeNegara', 'Kode negara (3)', { group: 'Pemotong pajak' }),
           { key: 'tanggal', label: 'Tanggal transaksi/pembayaran PPh (4)', type: 'date', width: 170 },
-          text('kodePenghasilan', 'Kode penghasilan (5)', { width: 140 }),
+          code('kodePenghasilan', 'Kode penghasilan (5)', PENGHASILAN_LUAR_NEGERI, false, { placeholder: 'Pilih jenis penghasilan' }),
           rp('netto', 'Penghasilan netto (6)'),
           rp('pajakNilai', 'Nilai (7)', { group: 'Pajak terutang/dibayar di luar negeri' }),
-          { key: 'valas', label: 'Valas (8)', type: 'select', options: ['USD', 'SGD', 'EUR', 'JPY', 'CNY', 'AUD'], group: 'Pajak terutang/dibayar di luar negeri', width: 110 },
+          code('valas', 'Valas (8)', MATA_UANG, true, { group: 'Pajak terutang/dibayar di luar negeri', placeholder: 'Pilih mata uang' }),
           { key: 'pajakValas', label: 'Nilai (dalam valas) (9)', type: 'usd', group: 'Pajak terutang/dibayar di luar negeri' },
           rp('kredit', 'Kredit pajak yang dapat diperhitungkan (10)'),
         ],
@@ -173,8 +189,8 @@ const lampiran4: LampiranDef = {
         key: 'final',
         mode: 'inline',
         columns: [
-          text('kodeObjek', 'Kode objek pajak (2)', { width: 150, required: true }),
-          text('objek', 'Objek pajak (3)', { width: 240 }),
+          code('kodeObjek', 'Kode objek pajak (2)', OBJEK_PPH_FINAL, true, { required: true, placeholder: 'Pilih objek pajak' }),
+          text('objek', 'Objek pajak (3)', { width: 280, derive: r => codeName(OBJEK_PPH_FINAL, r.kodeObjek) }),
           rp('dpp', 'Dasar pengenaan pajak (4)'),
           { key: 'tarif', label: 'Tarif (5)', type: 'percent', width: 100 },
           { key: 'pph', label: 'PPh terutang (6)', type: 'currency', compute: r => Math.round(num(r.dpp) * num(r.tarif) / 100) },
@@ -194,8 +210,8 @@ const lampiran4: LampiranDef = {
         key: 'nonObjek',
         mode: 'inline',
         columns: [
-          text('kodeJenis', 'Kode jenis penghasilan (2)', { width: 170, required: true }),
-          text('jenis', 'Jenis penghasilan (3)', { width: 240 }),
+          code('kodeJenis', 'Kode jenis penghasilan (2)', NON_OBJEK_PAJAK, true, { required: true, placeholder: 'Pilih jenis penghasilan' }),
+          text('jenis', 'Jenis penghasilan (3)', { width: 280, derive: r => codeName(NON_OBJEK_PAJAK, r.kodeJenis) }),
           text('sumber', 'Sumber penghasilan (4)', { width: 220 }),
           rp('bruto', 'Penghasilan bruto (5)'),
         ],
@@ -407,12 +423,12 @@ const lampiran10a: LampiranDef = {
       columns: [
         text('nama', 'Nama (2)', { width: 200, required: true }),
         { key: 'npwp', label: 'NPWP/TIN (3)', type: 'id', width: 180 },
-        text('kodeNegara', 'Kode negara (4)', { width: 120 }),
-        text('kodeHubungan', 'Kode bentuk hubungan (5)', { width: 170 }),
+        negara('kodeNegara', 'Kode negara (4)'),
+        code('kodeHubungan', 'Kode bentuk hubungan (5)', BENTUK_HUBUNGAN, false, { placeholder: 'Pilih bentuk hubungan' }),
         text('kegiatan', 'Kegiatan usaha (6)', { width: 180 }),
-        text('kodeTransaksi', 'Kode jenis transaksi (7)', { width: 170 }),
+        code('kodeTransaksi', 'Kode jenis transaksi (7)', JENIS_TRANSAKSI, false, { placeholder: 'Pilih jenis transaksi' }),
         rp('nilai', 'Nilai transaksi (8)'),
-        text('kodeHarga', 'Kode penetapan harga yang digunakan (9)', { width: 220 }),
+        code('kodeHarga', 'Kode penetapan harga yang digunakan (9)', METODE_HARGA, true, { width: 260, placeholder: 'Pilih metode' }),
         text('alasan', 'Alasan penggunaan metode (10)', { width: 240, full: true }),
       ],
       totals: ['nilai'],
@@ -497,7 +513,7 @@ const lampiran10c: LampiranDef = {
         columns: [
           text('mitra', 'Nama mitra transaksi (2)', { width: 220, required: true }),
           text('jenis', 'Jenis transaksi (3)', { width: 200 }),
-          text('kodeNegara', 'Kode negara (4)', { width: 130 }),
+          negara('kodeNegara', 'Kode negara (4)'),
           rp('nilai', 'Nilai transaksi (5)'),
         ],
         summaries: [{ label: 'Jumlah nilai transaksi', value: sumOf('nilai') }],
@@ -811,8 +827,8 @@ const lampiran11c: LampiranDef = {
       columns: [
         text('nama', 'Nama (2)', { group: 'Pemberi pinjaman', width: 200, required: true }),
         text('alamat', 'Alamat (3)', { group: 'Pemberi pinjaman', width: 220 }),
-        text('negara', 'Negara/yuridiksi (4)', { group: 'Pemberi pinjaman', width: 160 }),
-        text('kodeValas', 'Kode (5)', { group: 'Mata uang', width: 100 }),
+        negara('negara', 'Negara/yuridiksi (4)', { group: 'Pemberi pinjaman' }),
+        code('kodeValas', 'Kode (5)', MATA_UANG, true, { group: 'Mata uang', placeholder: 'Pilih mata uang' }),
         rp('kurs', 'Kurs akhir tahun (6)', { group: 'Mata uang' }),
         { key: 'awal', label: 'Awal tahun (7)', type: 'usd', group: 'Pokok utang (USD)' },
         { key: 'tambah', label: 'Penambahan (8)', type: 'usd', group: 'Pokok utang (USD)' },
@@ -841,7 +857,7 @@ const lampiran12a: LampiranDef = {
       key: 'pph26',
       headers: ['No.', 'Penghitungan PPh Pasal 26 Ayat (4)', 'Nilai'],
       items: [
-        item(undefined, 'Kode negara kantor pusat', 'kodeNegara', { type: 'text' }),
+        item(undefined, 'Kode negara kantor pusat', 'kodeNegara', { type: 'select', options: toOptions(NEGARA) }),
         item('1', 'Penghasilan neto fiskal', 'neto', { type: 'computed', compute: (_, ctx) => ctx.penghasilanNeto, hint: 'Diisi dari SPT Induk angka 4' }),
         item('2', 'PPh badan terutang', 'pphBadan'),
         item('3', 'Dasar pengenaan pajak PPh Pasal 26 Ayat (4) (1 - 2)', 'dpp', { type: 'computed', compute: (v, ctx) => ctx.penghasilanNeto - num(v.pphBadan) }),
@@ -849,7 +865,7 @@ const lampiran12a: LampiranDef = {
         item('a', 'Terutang: tarif x jumlah pada angka (3)', 'tarif', { indent: 1, type: 'percent', hint: 'Isi tarif (%) sesuai UU PPh atau P3B' }),
         item(undefined, 'PPh Pasal 26 Ayat (4) terutang', 'terutang', { indent: 1, type: 'computed', compute: (v, ctx) => Math.round(num(v.tarif) / 100 * (ctx.penghasilanNeto - num(v.pphBadan))) }),
         item('b', 'Tidak terutang, berdasarkan:', undefined, { heading: true, indent: 1 }),
-        item('1)', 'Ketentuan P3B Indonesia - (kode negara)', 'p3b', { indent: 2, type: 'text' }),
+        item('1)', 'Ketentuan P3B Indonesia - (kode negara)', 'p3b', { indent: 2, type: 'select', options: toOptions(NEGARA.filter(c => c.code !== 'IDN')) }),
         item('2)', 'Ditanamkan kembali seluruhnya di Indonesia', undefined, { heading: true, indent: 2 }),
         item('a)', 'Ditanamkan kembali pada perusahaan baru di Indonesia — NPWP', 'npwpBaru', { indent: 2, type: 'id' }),
         item('b)', 'Ditanamkan kembali pada perusahaan yang sudah berdiri di Indonesia — NPWP', 'npwpLama', { indent: 2, type: 'id' }),
