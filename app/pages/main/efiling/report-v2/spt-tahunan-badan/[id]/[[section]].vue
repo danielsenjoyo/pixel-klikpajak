@@ -12,13 +12,16 @@ import {
   toast,
 } from '@mekari/pixel3'
 import blankSlateImage from '~/assets/images/blankslate-spt.png'
+import { missingLampiran, sectionStates } from '~/data/spt1771Checkpoints'
+import { blockValues, num } from '~/data/spt1771Engine'
 import { computeInduk, missingFields } from '~/data/spt1771Induk'
+import { lampiranDef } from '~/data/spt1771LampiranDefs'
 import { SEKTOR_USAHA, penghasilanNetoFiskal } from '~/data/spt1771Lampiran1'
 import { LIST_PATH, detailPath, findSection, isLocked, masaLabel } from '~/data/sptTahunanBadan'
 
 // Lapor SPT Tahunan Badan — Figma "SPT-Tahunan-Badan › --> SPT":
 // page title (breadcrumb, Download petunjuk pengisian, Lapor SPT), in-page section
-// menu, SPT Induk / Lampiran forms, Simpan. Lampiran 2–14 are placeholders for now.
+// menu with checkpoints, SPT Induk / Lampiran 1 (bespoke) and Lampiran 2–14 (engine), Simpan.
 definePageMeta({
   // Keep one instance across sections so the unsaved draft survives section switches.
   key: route => String(route.params.id),
@@ -32,7 +35,9 @@ const spt = computed(() => get(id))
 
 const sectionKey = computed(() => {
   const key = String(route.params.section ?? 'induk')
-  return findSection(key) ? key : 'induk'
+  const s = findSection(key)
+  // Group keys (lampiran-10…13) open their first part.
+  return s ? (s.children?.[0]?.key ?? key) : 'induk'
 })
 const section = computed(() => findSection(sectionKey.value)!)
 
@@ -44,14 +49,25 @@ const isPembetulan = computed(() => (spt.value?.revision ?? 0) > 0)
 const isReadOnly = computed(() => !!spt.value && isLocked(spt.value))
 const sektorLabel = computed(() => SEKTOR_USAHA.find(s => s.value === draft.value.lampiran1.sektor)?.label ?? '')
 
-const totals = computed(() => computeInduk(draft.value.induk, penghasilanNetoFiskal(draft.value.lampiran1), isPembetulan.value))
-const missing = computed(() => missingFields(draft.value.induk, totals.value))
+const pasal31eBruto = computed(() => num(blockValues(draft.value.lampiran['lampiran-8'] ?? {}, 'pasal31e').bruto))
+const totals = computed(() => computeInduk(draft.value.induk, penghasilanNetoFiskal(draft.value.lampiran1), isPembetulan.value, pasal31eBruto.value))
+const indukMissing = computed(() => missingFields(draft.value.induk, totals.value))
+const states = computed(() => sectionStates({
+  induk: draft.value.induk,
+  indukMissing: indukMissing.value,
+  lampiran1: draft.value.lampiran1,
+  lampiran: draft.value.lampiran,
+}))
+const missing = computed(() => [...indukMissing.value, ...missingLampiran(states.value)])
 const isComplete = computed(() => missing.value.length === 0)
 
 const status = computed(() => {
   if (isReadOnly.value) return { label: 'Sudah dilaporkan', type: 'information' as const }
   return isComplete.value ? { label: 'Lengkap', type: 'completed' as const } : { label: 'Belum lengkap', type: 'warning' as const }
 })
+
+const lampiranPage = computed(() => (spt.value ? lampiranDef(sectionKey.value, spt.value.year) : undefined))
+const lampiranCtx = computed(() => ({ year: spt.value?.year ?? 0, pkp: totals.value.pkp, penghasilanNeto: totals.value.d4 }))
 
 const isNavCollapsed = ref(false)
 const hrefFor = (key: string) => detailPath({ id }, key)
@@ -133,6 +149,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
             :href-for="hrefFor"
             :status="status"
             :missing="isReadOnly ? [] : missing"
+            :states="states"
           />
 
           <div class="spt-lapor__content">
@@ -150,6 +167,14 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
                 :sektor-label="sektorLabel"
               />
               <SptLampiran1 v-else-if="sectionKey === 'lampiran-1'" v-model="draft.lampiran1" :is-read-only="isReadOnly" />
+              <SptLampiranPage
+                v-else-if="lampiranPage"
+                :key="sectionKey"
+                v-model="draft.lampiran[sectionKey]"
+                :def="lampiranPage"
+                :ctx="lampiranCtx"
+                :is-read-only="isReadOnly"
+              />
               <SptLampiranPlaceholder v-else :title="section.label" />
             </fieldset>
 

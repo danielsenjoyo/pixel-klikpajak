@@ -1,9 +1,13 @@
 import { emptyInduk, type SptIndukData } from '~/data/spt1771Induk'
+import type { SectionData } from '~/data/spt1771Engine'
 import { emptyLampiran1, type Lampiran1Data } from '~/data/spt1771Lampiran1'
+import { emptyLampiran } from '~/data/spt1771LampiranDefs'
 
 export interface Spt1771Form {
   induk: SptIndukData
   lampiran1: Lampiran1Data
+  /** Lampiran 2–14, keyed by section key (e.g. 'lampiran-10a'). */
+  lampiran: Record<string, SectionData>
   savedAt: string | null
 }
 
@@ -20,6 +24,7 @@ export function useSpt1771Form(sptId: string) {
       [sptId]: {
         induk: emptyInduk({ npwp: company.value.npwp, nama: company.value.name }),
         lampiran1: emptyLampiran1(),
+        lampiran: emptyLampiran(),
         savedAt: null,
       },
     }

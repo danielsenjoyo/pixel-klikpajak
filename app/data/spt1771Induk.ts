@@ -2,6 +2,7 @@
  * SPT Tahunan PPh Badan — SPT Induk form model + calculations.
  * Fields and numbering follow Figma "SPT / induk" (sections A–J).
  */
+import { hitungLampiran8 } from '~/data/spt1771LampiranDefs'
 import { n } from '~/utils/currency'
 
 export type YesNo = boolean
@@ -13,7 +14,7 @@ export const OPINI_AUDITOR = [
   'Tidak menyatakan pendapat',
 ] as const
 
-/** D.11 Tarif pajak. Rates are simplified; (c) is a flat 50% facility until Lampiran 8 is built. */
+/** D.11 Tarif pajak. (c) uses Lampiran 8 when its peredaran bruto is filled, else a flat 50% facility. */
 export const TARIF_OPTIONS = [
   { value: 'a', label: 'a. Tarif Ketentuan Umum sebagaimana Pasal 17 ayat (1) huruf b UU PPh', rate: 0.22 },
   { value: 'b', label: 'b. Tarif Fasilitas sebagaimana Pasal 17 ayat (2b) UU PPh', rate: 0.19 },
@@ -178,7 +179,11 @@ export interface IndukTotals {
   d4: number
   d7: number
   d9: number
+  /** Base for D.12: 9 - 10. */
+  pkp: number
   d12: number
+  /** D.12 comes from Lampiran 8 angka 4 (tarif c with peredaran bruto filled). */
+  d12FromLampiran8: boolean
   f17a: number
   f17c: number
   f18b: number
@@ -188,16 +193,18 @@ export interface IndukTotals {
 /** Amount only counts when its "Ya" question is answered Ya. */
 const when = (flag: boolean, amount: number | null) => (flag ? n(amount) : 0)
 
-export function computeInduk(d: SptIndukData, penghasilanNeto: number, isPembetulan: boolean): IndukTotals {
+export function computeInduk(d: SptIndukData, penghasilanNeto: number, isPembetulan: boolean, pasal31eBruto = 0): IndukTotals {
   const d4 = penghasilanNeto
   const d7 = d4 - when(d.d5, d.d5Amount) - when(d.d6, d.d6Amount)
   const d9 = d7 - when(d.d8, d.d8Amount)
+  const pkp = d9 - when(d.d10, d.d10Amount)
   const rate = TARIF_OPTIONS.find(t => t.value === d.tarif)?.rate ?? 0.22
-  const d12 = Math.max(0, Math.round(rate * (d9 - when(d.d10, d.d10Amount))))
+  const d12FromLampiran8 = d.tarif === 'c' && pasal31eBruto > 0
+  const d12 = Math.max(0, d12FromLampiran8 ? hitungLampiran8(pasal31eBruto, pkp).total : Math.round(rate * pkp))
   const f17a = d12 - when(d.e13, d.e13Amount) - n(d.e14Amount) - n(d.e15Amount) - when(d.e16, d.e16Amount)
   const f17c = f17a - when(d.f17b, d.f17bAmount)
   const f18b = isPembetulan ? f17a - n(d.f18aAmount) : 0
-  return { d4, d7, d9, d12, f17a, f17c, f18b, isLebihBayar: f17c < 0 || f18b < 0 }
+  return { d4, d7, d9, pkp, d12, d12FromLampiran8, f17a, f17c, f18b, isLebihBayar: f17c < 0 || f18b < 0 }
 }
 
 /** Fields that must be filled before the SPT can be reported. */

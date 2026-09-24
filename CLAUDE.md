@@ -45,13 +45,17 @@ app/
   components/KpStage        white content stage filling the page (optional section title)
   components/KpPagination   table pagination (Pixel 3 ships none) — v-model:page / v-model:per-page
   components/KpBlankSlate   empty / filtered-empty state (illustration + copy + optional action)
-  components/KpCurrencyInput  "Rp" amount field (formats 1.234.567,00; disabled = computed)
+  components/KpCurrencyInput  "Rp" (or `prefix="$"`) amount field (formats 1.234.567,00; disabled = computed)
   components/KpYesNo        Tidak/Ya radio pair · KpQuestion (question + hints) · KpFormSection
   components/KpFileField    "Pilih file" upload with format hint (stores file name)
-  components/spt/*          SPT Tahunan Badan: SptSectionNav, SptIndukForm, SptLampiran1,
-                            SptAccountTable, SptLampiranPlaceholder
+  components/spt/*          SPT Tahunan Badan: SptSectionNav (checkpoints), SptIndukForm, SptLampiran1,
+                            SptAccountTable; lampiran engine: SptLampiranPage → SptTableBlock /
+                            SptFormBlock / SptStatementsBlock / SptFieldsBlock, SptField
   data/spt1771Induk.ts      SPT Induk model, options, computeInduk(), missingFields()
   data/spt1771Lampiran1.ts  Lampiran 1A rows + formulas (Laba Rugi, Posisi Keuangan)
+  data/spt1771Engine.ts     config types for lampiran (table/form/statements/fields blocks) + helpers
+  data/spt1771LampiranDefs.ts  Lampiran 2–14 definitions (from Figma), lampiranDef(), emptyLampiran()
+  data/spt1771Checkpoints.ts   done / required / optional per section; required lampiran from Induk
   composables/useSidebar    collapse state, persisted in localStorage "sidebar" like the source
   data/navigation.ts        sidebar tree + active-module / active-leaf helpers
   data/session.ts           mock user-setting payload (company, NPWP, flags)
@@ -66,6 +70,10 @@ Form pages follow the Lapor SPT page `…/spt-tahunan-badan/[id]/[[section]].vue
 in-page section menu + 640px form column + sticky Simpan, draft/save via a composable
 (`useSpt1771Form`), unsaved-changes guard, `definePageMeta({ key, sidebarPanel: 'collapsed' })`.
 The layout adds no content padding — pages own it.
+
+Lampiran 2–14 are config, not components: add or change one in `spt1771LampiranDefs.ts`
+(table columns with `group` for two-row headers, `compute` for read-only values, `mode: 'drawer'`
+for "Tambah data" drawers). If an Induk answer requires it, add the rule to `requiredLampiran()`.
 
 Pages mirror source URLs (`/main/efaktur-v2/out` → `app/pages/main/efaktur-v2/out/index.vue`),
 so every nav link resolves and a ported page simply replaces the placeholder.

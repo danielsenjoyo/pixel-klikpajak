@@ -2,7 +2,7 @@
 import { MpInput, MpInputGroup, MpInputLeftAddon, MpText } from '@mekari/pixel3'
 import { formatNumber } from '~/utils/currency'
 
-// Rupiah amount field (Figma "Input" with "Rp" prefix). Shows "1.234.567,00" at rest
+// Rupiah (or valas via `prefix`) amount field (Figma "Input" with "Rp" prefix). Shows "1.234.567,00" at rest
 // and raw digits while focused. Disabled = computed / not-applicable (grey, as in Figma).
 const props = withDefaults(defineProps<{
   id: string
@@ -11,7 +11,9 @@ const props = withDefaults(defineProps<{
   isInvalid?: boolean
   size?: 'sm' | 'md'
   placeholder?: string
-}>(), { modelValue: null, size: 'md', placeholder: '' })
+  /** Addon text — "Rp" by default, "$" for valas amounts. */
+  prefix?: string
+}>(), { modelValue: null, size: 'md', placeholder: '', prefix: 'Rp' })
 
 const emit = defineEmits<{ 'update:modelValue': [value: number | null] }>()
 
@@ -30,7 +32,7 @@ function onInput(value: string | number) {
 <template>
   <MpInputGroup :id="`${id}-group`" :size="size" class="kp-currency" @focusin="isFocused = true" @focusout="isFocused = false">
     <MpInputLeftAddon :id="`${id}-addon`" has-background>
-      <MpText :size="size === 'sm' ? 'label-small' : 'label'" weight="semiBold" :color="isDisabled ? 'text.disabled' : 'text.default'">Rp</MpText>
+      <MpText :size="size === 'sm' ? 'label-small' : 'label'" weight="semiBold" :color="isDisabled ? 'text.disabled' : 'text.default'">{{ prefix }}</MpText>
     </MpInputLeftAddon>
     <MpInput
       :id="id"

@@ -169,7 +169,7 @@ defineProps<{
           <MpRadio v-for="t in TARIF_OPTIONS" :id="`induk-tarif-${t.value}`" :key="t.value" name="induk-tarif" :value="t.value" v-model="form.tarif">{{ t.label }}</MpRadio>
         </div>
       </KpQuestion>
-      <KpQuestion label="12. PPh terutang (11 x (9 - 10))">
+      <KpQuestion label="12. PPh terutang (11 x (9 - 10))" :hints="totals.d12FromLampiran8 ? ['Diisi dari Lampiran 8 angka 4'] : []">
         <KpCurrencyInput id="induk-d12" :model-value="totals.d12" is-disabled />
       </KpQuestion>
     </KpFormSection>
