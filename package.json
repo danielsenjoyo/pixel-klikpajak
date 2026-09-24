@@ -7,7 +7,9 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "pixel-police": "node scripts/pixel-police.mjs",
+    "prepare": "git config core.hooksPath .githooks"
   },
   "dependencies": {
     "@mekari/pixel3": "latest",

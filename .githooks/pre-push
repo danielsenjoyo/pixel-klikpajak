@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+#
+# Pre-push gate — same checks as CI (.github/workflows/ci.yml), run locally before a push
+# leaves this machine. Wired by `npm install` (package.json "prepare" sets core.hooksPath).
+
+# Git runs hooks without your shell profile, so user-local Node installs may not be on PATH.
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# Build must pass with zero errors (CLAUDE.md). Emergency escape hatch: BUILD_SKIP=1 git push
+if [ "${BUILD_SKIP:-0}" = "1" ]; then
+  echo "Build: skipped (BUILD_SKIP=1)"
+else
+  npm run --silent build >/dev/null 2>&1 || { echo "❌ npm run build failed — run it to see why."; exit 1; }
+  echo "✅ Build passed."
+fi
+
+# Pixel Police — block the push on NEW token/component violations (added lines only, vs. the
+# merge-base with origin/main). It also reads the working tree, so a violation in an
+# uncommitted edit blocks the push too. Emergency escape hatch: PIXEL_POLICE_SKIP=1 git push
+if [ "${PIXEL_POLICE_SKIP:-0}" = "1" ]; then
+  echo "Pixel Police: skipped (PIXEL_POLICE_SKIP=1)"
+else
+  git fetch --quiet --no-tags origin main 2>/dev/null || true
+  node scripts/pixel-police.mjs || exit 1
+fi

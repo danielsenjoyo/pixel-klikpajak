@@ -10,6 +10,7 @@ no backend calls.
 npm install
 npm run dev      # http://localhost:4331 (edit here)
 npm run build    # must pass with zero errors before a change is done
+npm run pixel-police   # Pixel Police gate on your changes (add `-- --all` to audit the repo)
 PORT=4332 node .output/server/index.mjs   # production preview — use for visual checks
 ```
 
@@ -106,6 +107,29 @@ so every nav link resolves and a ported page simply replaces the placeholder.
    unscoped `<style>` block; scoped classes won't match it.
 5. Dev CSS can go stale after many edits (Panda regen race): if a Pixel component
    renders unstyled in dev but fine in `npm run build`, restart `npm run dev`.
+
+## Pixel Police — the compliance gate
+
+Design-system compliance, ported from pixel-jurnal. Two halves:
+
+- **`scripts/pixel-police.mjs`** (`npm run pixel-police`) — 11 mechanical rules from the Pixel
+  rules above (hardcoded colour, unknown `--mp-*`/`--kp-*` token, px spacing/type, numeric
+  font-weight, raw HTML control, inline style, MpIcon size, MpAvatar `variant-color`, v-tooltip
+  object, non-`pixel3` import, token mode) checked on the **added lines only** of changed
+  `app/**/*.vue` / `.css` files versus the merge-base with `origin/main` — commits since the base
+  **plus the working tree**, untracked files included. Runs on `git push` (`.githooks/pre-push`,
+  wired by `npm install` via `core.hooksPath`, together with `npm run build`) and in CI
+  (`.github/workflows/ci.yml`). A genuine, documented exception gets a `pixel-police-allow`
+  comment on the line (or the line above a multi-line tag) — and the exception written into the
+  rule list in the same change. Escape hatches for emergencies: `PIXEL_POLICE_SKIP=1` /
+  `BUILD_SKIP=1 git push`.
+- **The `pixel-police` skill** (`.agents/skills/pixel-police/`, linked from `.claude/skills/`) —
+  the reviewer that runs the same rules plus everything a script can't see (props via the Pixel
+  MCP, page patterns, state coverage, copy, a11y), emits findings, and rewrites the code to
+  comply. `references/rules.md` is the full two-tier rule list.
+
+Run `npm run pixel-police` and `npm run build` before handing work back. Never silence a
+finding with `pixel-police-allow` to make the gate pass.
 
 ## Porting plan
 
