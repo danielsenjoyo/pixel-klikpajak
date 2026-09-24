@@ -20,15 +20,17 @@ export const toOptions = (list: readonly Code[], withCode = true): CodeOption[] 
 export const codeName = (list: readonly Code[], code: unknown): string =>
   list.find(c => c.code === code)?.name ?? ''
 
-// ── ISO 3166-1 alpha-3 (subset: Indonesia, treaty partners, common counterparties) ──
+// ── ISO 3166-1 alpha-3 (subset: Indonesia, P3B partners, common counterparties) ──
 export const NEGARA: Code[] = [
   { code: 'IDN', name: 'Indonesia' },
-  { code: 'AUS', name: 'Australia' },
-  { code: 'AUT', name: 'Austria' },
   { code: 'ARE', name: 'Uni Emirat Arab' },
   { code: 'ARG', name: 'Argentina' },
+  { code: 'ARM', name: 'Armenia' },
+  { code: 'AUS', name: 'Australia' },
+  { code: 'AUT', name: 'Austria' },
   { code: 'BEL', name: 'Belgia' },
   { code: 'BGD', name: 'Bangladesh' },
+  { code: 'BGR', name: 'Bulgaria' },
   { code: 'BHR', name: 'Bahrain' },
   { code: 'BHS', name: 'Bahama' },
   { code: 'BMU', name: 'Bermuda' },
@@ -42,6 +44,7 @@ export const NEGARA: Code[] = [
   { code: 'CZE', name: 'Ceko' },
   { code: 'DEU', name: 'Jerman' },
   { code: 'DNK', name: 'Denmark' },
+  { code: 'DZA', name: 'Aljazair' },
   { code: 'EGY', name: 'Mesir' },
   { code: 'ESP', name: 'Spanyol' },
   { code: 'FIN', name: 'Finlandia' },
@@ -49,10 +52,12 @@ export const NEGARA: Code[] = [
   { code: 'GBR', name: 'Britania Raya' },
   { code: 'GGY', name: 'Guernsey' },
   { code: 'HKG', name: 'Hong Kong' },
+  { code: 'HRV', name: 'Kroasia' },
   { code: 'HUN', name: 'Hongaria' },
   { code: 'IMN', name: 'Pulau Man' },
   { code: 'IND', name: 'India' },
   { code: 'IRL', name: 'Irlandia' },
+  { code: 'IRN', name: 'Iran' },
   { code: 'ITA', name: 'Italia' },
   { code: 'JEY', name: 'Jersey' },
   { code: 'JOR', name: 'Yordania' },
@@ -65,9 +70,11 @@ export const NEGARA: Code[] = [
   { code: 'LKA', name: 'Sri Lanka' },
   { code: 'LUX', name: 'Luksemburg' },
   { code: 'MAC', name: 'Makau' },
+  { code: 'MAR', name: 'Maroko' },
   { code: 'MCO', name: 'Monako' },
   { code: 'MEX', name: 'Meksiko' },
   { code: 'MMR', name: 'Myanmar' },
+  { code: 'MNG', name: 'Mongolia' },
   { code: 'MUS', name: 'Mauritius' },
   { code: 'MYS', name: 'Malaysia' },
   { code: 'NGA', name: 'Nigeria' },
@@ -78,23 +85,50 @@ export const NEGARA: Code[] = [
   { code: 'PAK', name: 'Pakistan' },
   { code: 'PAN', name: 'Panama' },
   { code: 'PHL', name: 'Filipina' },
+  { code: 'PNG', name: 'Papua Nugini' },
   { code: 'POL', name: 'Polandia' },
+  { code: 'PRK', name: 'Korea Utara' },
   { code: 'PRT', name: 'Portugal' },
   { code: 'QAT', name: 'Qatar' },
   { code: 'ROU', name: 'Rumania' },
   { code: 'RUS', name: 'Rusia' },
   { code: 'SAU', name: 'Arab Saudi' },
+  { code: 'SDN', name: 'Sudan' },
   { code: 'SGP', name: 'Singapura' },
+  { code: 'SRB', name: 'Serbia' },
+  { code: 'SUR', name: 'Suriname' },
+  { code: 'SVK', name: 'Slowakia' },
   { code: 'SWE', name: 'Swedia' },
   { code: 'SYC', name: 'Seychelles' },
+  { code: 'SYR', name: 'Suriah' },
   { code: 'THA', name: 'Thailand' },
+  { code: 'TJK', name: 'Tajikistan' },
+  { code: 'TUN', name: 'Tunisia' },
   { code: 'TUR', name: 'Turki' },
   { code: 'TWN', name: 'Taiwan' },
+  { code: 'UKR', name: 'Ukraina' },
   { code: 'USA', name: 'Amerika Serikat' },
+  { code: 'UZB', name: 'Uzbekistan' },
+  { code: 'VEN', name: 'Venezuela' },
   { code: 'VGB', name: 'Kepulauan Virgin Britania Raya' },
   { code: 'VNM', name: 'Vietnam' },
   { code: 'ZAF', name: 'Afrika Selatan' },
 ]
+
+/**
+ * Negara mitra P3B (Indonesia's tax treaties in force), for Lampiran 12A "Ketentuan P3B".
+ * Compiled from memory of DJP's published P3B list; verify against pajak.go.id before relying
+ * on it. Left out while their status is unclear: KHM, EST, SAU. Mauritius (terminated) excluded.
+ */
+const P3B_CODES = new Set([
+  'ARE', 'ARM', 'AUS', 'AUT', 'BEL', 'BGD', 'BGR', 'BRN', 'CAN', 'CHE', 'CHN', 'CZE', 'DEU',
+  'DNK', 'DZA', 'EGY', 'ESP', 'FIN', 'FRA', 'GBR', 'HKG', 'HRV', 'HUN', 'IND', 'IRN', 'ITA',
+  'JOR', 'JPN', 'KOR', 'KWT', 'LAO', 'LKA', 'LUX', 'MAR', 'MEX', 'MNG', 'MYS', 'NLD', 'NOR',
+  'NZL', 'PAK', 'PHL', 'PNG', 'POL', 'PRK', 'PRT', 'QAT', 'ROU', 'RUS', 'SDN', 'SGP', 'SRB',
+  'SUR', 'SVK', 'SWE', 'SYC', 'SYR', 'THA', 'TJK', 'TUN', 'TUR', 'TWN', 'UKR', 'USA', 'UZB',
+  'VEN', 'VNM', 'ZAF',
+])
+export const NEGARA_P3B: Code[] = NEGARA.filter(c => P3B_CODES.has(c.code))
 
 // ── ISO 4217 (subset) ────────────────────────────────────────────────────────
 export const MATA_UANG: Code[] = [

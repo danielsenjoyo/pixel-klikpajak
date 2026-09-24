@@ -39,6 +39,8 @@ Done so far: **boilerplate only** — shell, nav, layouts, placeholders.
   from the backend). Country / currency use real ISO codes (subset); Lampiran 4 objek pajak and
   jenis penghasilan use placeholder ids (F01…, N01…); swap in DJP's lists when those endpoints
   are ported. Still free text: Lampiran 9 kode aset, Lampiran 1 kode koreksi fiskal.
+- Lampiran 12A "Ketentuan P3B" lists treaty partners only (`NEGARA_P3B`, 68 countries, compiled
+  from memory) — verify against DJP's P3B list; KHM, EST, SAU left out pending status.
 
 ## Phase 1 — Shared foundations (do before any module)
 
