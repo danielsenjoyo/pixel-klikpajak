@@ -41,11 +41,21 @@ app/
   components/KpSidebarItem  panel row / collapsible group (recursive)
   components/KpSidebarMobile  drawer version below 992px
   components/KpNotPorted    placeholder shown for any route not ported yet
+  components/KpPageHeader   page title bar (title + actions slot) on the surface background
+  components/KpStage        white content stage filling the page (optional section title)
+  components/KpPagination   table pagination (Pixel 3 ships none) — v-model:page / v-model:per-page
+  components/KpBlankSlate   empty / filtered-empty state (illustration + copy + optional action)
+  components/KpLaporSptMenu "Lapor SPT" dropdown with SPT Masa / SPT Tahunan flyouts
   composables/useSidebar    collapse state, persisted in localStorage "sidebar" like the source
   data/navigation.ts        sidebar tree + active-module / active-leaf helpers
   data/session.ts           mock user-setting payload (company, NPWP, flags)
   pages/[...slug].vue       catch-all → KpNotPorted
 ```
+
+Index pages follow: `KpPageHeader` → `KpStage` → filter row → `MpTable` → `KpPagination`,
+with `KpBlankSlate` for empty and filtered-empty states. Reference implementation:
+`app/pages/main/efiling/report-v2/spt-tahunan-badan.vue` (Figma: SPT-Tahunan-Badan › Index).
+The layout adds no content padding — pages own it.
 
 Pages mirror source URLs (`/main/efaktur-v2/out` → `app/pages/main/efaktur-v2/out/index.vue`),
 so every nav link resolves and a ported page simply replaces the placeholder.
@@ -58,7 +68,11 @@ so every nav link resolves and a ported page simply replaces the placeholder.
    Known gotchas: `MpIcon` sizes are only `sm` | `md`; always pass `variant-color`
    to `MpAvatar` (its random colour can come out blank); `MpCollapse` throws when
    mounted open — use `v-show` for open-by-default groups; there is no `MpButtonIcon`
-   — use `.kp-icon-btn` from app.css.
+   — use `.kp-icon-btn` from app.css; `MpDatePicker` year limits use `:disabled-year`
+   (docs say `disable-year`); `MpSelect` has an 88px min-width; per-row `MpPopover`s
+   should pass `:is-keep-alive="false"` so closed menus don't stay in the DOM.
+   `MpBadge for="tableStatus"` types: announcement=gray, information=blue,
+   warning=orange, critical=red, completed=green.
 3. Custom CSS uses token variables only: `--mp-colors-<semantic>` (e.g.
    `--mp-colors-text-secondary`, `--mp-colors-border-default`), `--mp-spacing-*`,
    `--mp-radii-*`, `--mp-font-sizes-*`, `--mp-font-weights-*`, `--mp-shadows-*`.

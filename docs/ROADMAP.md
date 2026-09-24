@@ -12,12 +12,19 @@ Done so far: **boilerplate only** — shell, nav, layouts, placeholders.
 - `default` and `blank` layouts
 - Catch-all placeholder so every source URL resolves
 
+## Done
+
+- `/main/efiling/report-v2/spt-tahunan-badan` — SPT Tahunan Badan index (Figma
+  SPT-Tahunan-Badan › Index: default, blank, Lapor SPT menu + create modal, toast).
+  Established the index-page pattern and `KpPageHeader`, `KpStage`, `KpPagination`,
+  `KpBlankSlate`, `KpLaporSptMenu`.
+
 ## Phase 1 — Shared foundations (do before any module)
 
 | Item | Source | Notes |
 | --- | --- | --- |
 | Page header pattern (title, breadcrumb, actions) | `components/organisms/*`, `layouts/efaktur/*` | One `KpPageHeader` used by every page |
-| List page pattern (filter bar + `MpTable` + pagination) | `components/tables`, `components/pagination` | Most efaktur/ebupot/ebilling pages are lists |
+| List page pattern (filter bar + `MpTable` + pagination) | `components/tables`, `components/pagination` | ✅ Established on SPT Tahunan Badan; extract a `KpIndexTable` once a second list is ported |
 | Form page pattern (`MpFormControl` sections, sticky footer) | `layouts/efaktur/Form`, `components/inputs` | |
 | Detail page pattern | `layouts/efaktur/Detail` | |
 | Status tags | `components/approvalStatus`, `components/label` | Map source statuses → `MpBadge`/`MpTag` |

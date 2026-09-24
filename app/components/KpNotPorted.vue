@@ -36,6 +36,7 @@ const heading = computed(() => props.title ?? trail.value.at(-1) ?? route.path)
   display: flex;
   flex-direction: column;
   gap: var(--mp-spacing-1);
+  padding: var(--mp-spacing-5) var(--mp-spacing-6) var(--mp-spacing-6);
 }
 
 .kp-np__card {

@@ -20,6 +20,17 @@
       "env": {
         "PORT": "4332"
       }
+    },
+    {
+      "name": "klikpajak-verify",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".output/server/index.mjs"
+      ],
+      "port": 4333,
+      "env": {
+        "PORT": "4333"
+      }
     }
   ]
 }

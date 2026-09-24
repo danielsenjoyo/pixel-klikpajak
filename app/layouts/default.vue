@@ -38,9 +38,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   background: var(--mp-colors-background-surface);
 }
 
+/* Pages own their padding: index pages run KpPageHeader + a full-bleed KpStage. */
 .kp-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
   margin-left: var(--kp-content-offset);
-  padding: calc(var(--kp-header-height) + var(--mp-spacing-5)) var(--mp-spacing-6) var(--mp-spacing-6);
+  padding-top: var(--kp-header-height);
   transition: margin-left 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -50,8 +54,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
   }
   .kp-content {
     margin-left: 0;
-    padding-right: var(--mp-spacing-4);
-    padding-left: var(--mp-spacing-4);
   }
 }
 </style>
