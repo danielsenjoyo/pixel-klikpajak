@@ -5,8 +5,7 @@
  */
 
 :root {
-  --kp-header-height: 64px;
-  --kp-content-max-width: 1440px;
+  --kp-header-height: 56px;
 }
 
 *,
@@ -23,4 +22,26 @@ body {
   -webkit-font-smoothing: antialiased;
   color: var(--mp-colors-text-default);
   background: var(--mp-colors-background-surface);
+}
+
+/* Square icon-only header button (source: MpButtonIcon, which Pixel 3 doesn't ship). */
+.kp-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: var(--mp-radii-md);
+  background: transparent;
+  color: var(--mp-colors-icon-default);
+  cursor: pointer;
+  transition: background-color 200ms ease;
+}
+.kp-icon-btn:hover {
+  background: var(--mp-colors-background-neutral-hovered);
+}
+.kp-icon-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--mp-shadows-focus);
 }

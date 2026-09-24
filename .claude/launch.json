@@ -4,8 +4,22 @@
     {
       "name": "klikpajak-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 4331
+    },
+    {
+      "name": "klikpajak-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        ".output/server/index.mjs"
+      ],
+      "port": 4332,
+      "env": {
+        "PORT": "4332"
+      }
     }
   ]
 }

@@ -1,204 +1,379 @@
 /**
- * Top-nav menu — ported from jurnal-tax
- * frontend/src/shared/constants/navigation/menu.js.
+ * Sidebar navigation — ported from jurnal-tax
+ * frontend/src/components/Pixel/Sidebar/Container/menuList.js (the current
+ * Klikpajak nav; the old top-nav menu.js is no longer rendered).
  *
- * Fields keep their source meaning:
- * - show: default visibility
- * - rolePermissionCode: permission key (not enforced yet — see docs/ROADMAP.md)
- * - matchPrefix: item is active when the current path starts with it
- *   (source: typeCheck: 'includes' + includedPath)
- * - isNew / isPremium: badges (source: useNewBadge / isPremiumFeature)
- * - isMobileOnly: only rendered in the mobile menu (source: isMobileViewOnly)
- *
- * The deprecated E-Faktur "Arsip" sub-tree (/main/efaktur/*) is kept because the
- * source still renders it under E-Faktur.
+ * The source builds this tree at runtime from user-setting flags. This port is
+ * the tree for a fully-activated Coretax company:
+ *   CTAS SPT active + canAccessSptCoretax  → Lapor Pajak "head office" sections
+ *   E-Faktur registered + onboarded        → legacy E-Faktur section expanded
+ *   E-Bupot registered, CTAS E-Bupot on    → BP 21/26/MP/A1/A2 + Daftar impor inserted
+ *   unified signee active                  → Penandatanganan › Coretax / Legacy
+ *   not a reconcile user                   → Rekonsiliasi shows the premium icon
+ * Items with isShow:false in the source (Scan faktur on desktop, PPh 21 menus)
+ * are omitted. Route names were resolved to paths via frontend/src/router.
+ * `/v2/*` paths are the source's decoupled (separate app) pages.
  */
-export interface NavItem {
-  key?: string
+export interface NavLeaf {
+  id: string
   label: string
-  path?: string
-  show: boolean
-  rolePermissionCode?: string
-  matchPrefix?: string
-  isNew?: boolean
+  path: string
+  icon?: string
+  /** Premium feature (source: isPremium → "upgrade" icon). */
   isPremium?: boolean
-  isMobileOnly?: boolean
-  children?: NavItem[]
+  /** Badge key into the session's sidebar counters (source: badgeName). */
+  badge?: 'payableCount'
+  /** Nested items rendered as a collapsible group (source: childs). */
+  children?: NavLeaf[]
 }
 
-const efakturArchive: NavItem = {
-  key: 'efaktur-archive',
-  show: true,
-  label: 'Arsip',
-  path: '/main/efaktur',
-  children: [
-    { key: 'nsfp', show: true, label: 'NSFP', path: '/main/efaktur/nsfp', rolePermissionCode: 'EFAKTUR_NSFP_VIEW' },
-    {
-      key: 'efaktur',
-      show: true,
-      label: 'Faktur',
-      rolePermissionCode: 'EFAKTUR_DOC_VIEW',
-      children: [
-        { show: true, label: 'Faktur Keluaran', path: '/main/efaktur/out' },
-        { show: true, label: 'Faktur Masukan', path: '/main/efaktur/in' },
-        { show: true, label: 'Retur Faktur Keluaran', path: '/main/efaktur/out/return' },
-        { show: true, label: 'Retur Faktur Masukan', path: '/main/efaktur/in/return' },
-      ],
-    },
-    {
-      key: 'doc',
-      show: true,
-      label: 'Dokumen Lain',
-      path: '/main/efaktur/document',
-      rolePermissionCode: 'EFAKTUR_DOC_VIEW',
-      children: [
-        { show: true, label: 'Dokumen Lain Keluaran', path: '/main/efaktur/document/out' },
-        { show: true, label: 'Dokumen Lain Masukan', path: '/main/efaktur/document/in' },
-        { show: true, label: 'Retur Dokumen Lain Keluaran', path: '/main/efaktur/document/out/return' },
-        { show: true, label: 'Retur Dokumen Lain Masukan', path: '/main/efaktur/document/in/return' },
-      ],
-    },
-    { key: 'reconcile', show: true, label: 'Rekonsiliasi', path: '/main/efaktur/reconcile', rolePermissionCode: 'EFAKTUR_RECON_VIEW', isNew: true },
-    { key: 'import', show: true, label: 'Impor Faktur Pajak', path: '/main/efaktur/import', rolePermissionCode: 'EFAKTUR_DOC_VIEW' },
-    { key: 'spt', show: true, label: 'SPT', path: '/main/efaktur/spt', rolePermissionCode: 'EFAKTUR_SPT_VIEW' },
+export interface NavSection {
+  title: string
+  items: NavLeaf[]
+}
+
+export interface NavModule {
+  id: string
+  label: string
+  icon: string
+  /** Where the top-level item navigates. */
+  path: string
+  /** Paths that make this module active (source: target.parent route-name prefix). */
+  match: string[]
+  rolePermissionCode?: string | string[]
+  /** Second-level panel title for single-section modules (source: items.name). */
+  panelTitle?: string
+  sections?: NavSection[]
+}
+
+/** Top-level groups are separated by a divider (source: parentId 1, 2, 3). */
+export const sidebarGroups: NavModule[][] = [
+  [
+    { id: 'home', label: 'Dasbor', icon: 'home', path: '/main/home', match: ['/main/home'] },
   ],
-}
-
-export const navigation: NavItem[] = [
-  { key: 'home', show: true, label: 'Dasbor', path: '/main/home' },
-  {
-    key: 'ebilling',
-    show: true,
-    label: 'E-Billing',
-    path: '/main/ebilling',
-    rolePermissionCode: 'EBILLING_VIEW',
-    matchPrefix: '/main/ebilling',
-  },
-  {
-    key: 'report',
-    show: true,
-    label: 'Lapor Pajak',
-    path: '/main/efiling/report/spt-masa-unifikasi',
-    rolePermissionCode: 'EFILING_VIEW',
-    matchPrefix: '/main/efiling',
-  },
-  {
-    key: 'faktur',
-    show: true,
-    label: 'E-Faktur',
-    path: '/main/efaktur-v2',
-    rolePermissionCode: 'EFAKTUR_VIEW',
-    matchPrefix: '/main/efaktur',
-    children: [
-      { key: 'nsfp-v2', show: true, label: 'NSFP', path: '/main/efaktur-v2/nsfp', rolePermissionCode: 'EFAKTUR_NSFP_VIEW' },
-      {
-        key: 'efaktur-v2',
-        show: true,
-        label: 'Faktur',
-        rolePermissionCode: 'EFAKTUR_DOC_VIEW',
-        children: [
-          { show: true, label: 'Faktur Keluaran', path: '/main/efaktur-v2/out' },
-          { show: true, label: 'Faktur Masukan', path: '/main/efaktur-v2/in' },
-          { show: true, label: 'Retur Faktur Keluaran', path: '/main/efaktur-v2/out/return' },
-          { show: true, label: 'Retur Faktur Masukan', path: '/main/efaktur-v2/in/return' },
-        ],
-      },
-      {
-        key: 'doc',
-        show: true,
-        label: 'Dokumen Lain',
-        path: '/main/efaktur-v2/document',
-        rolePermissionCode: 'EFAKTUR_DOC_VIEW',
-        children: [
-          { show: true, label: 'Dokumen Lain Keluaran', path: '/main/efaktur-v2/document/out' },
-          { show: true, label: 'Dokumen Lain Masukan', path: '/main/efaktur-v2/document/in' },
-          { show: true, label: 'Retur Dokumen Lain Keluaran', path: '/main/efaktur-v2/document/out/return' },
-          { show: true, label: 'Retur Dokumen Lain Masukan', path: '/main/efaktur-v2/document/in/return' },
-        ],
-      },
-      { key: 'reconcile', show: true, label: 'Rekonsiliasi', path: '/main/efaktur/reconcile', rolePermissionCode: 'EFAKTUR_RECON_VIEW', isPremium: true },
-      { key: 'import', show: true, label: 'Impor Faktur Pajak', path: '/main/efaktur-v2/import', rolePermissionCode: 'EFAKTUR_DOC_VIEW' },
-      { key: 'spt', show: true, label: 'SPT', path: '/main/efaktur/spt', rolePermissionCode: 'EFAKTUR_SPT_VIEW' },
-      efakturArchive,
-    ],
-  },
-  {
-    key: 'scan-faktur',
-    show: true,
-    label: 'Scan Faktur',
-    path: '/main/efaktur/in/scan',
-    rolePermissionCode: 'EFAKTUR_DOC_CREATE',
-    isMobileOnly: true,
-  },
-  {
-    key: 'bupot',
-    show: true,
-    label: 'E-Bupot',
-    path: '/main/ebupot',
-    rolePermissionCode: 'EBUPOT_VIEW',
-    matchPrefix: '/main/ebupot',
-    children: [
-      // Legacy v1 unifikasi entries are hidden in the source (toggleCtasEbupot).
-      { key: 'ebupot-unifikasi-domestic', show: false, label: 'PPh Pasal 4 ayat (2), 15, 22 & 23', path: '/main/ebupot/unifikasi/domestic', rolePermissionCode: 'EBUPOT_WITHHOLDING_VIEW' },
-      { key: 'ebupot-unifikasi-foreign', show: false, label: 'BP Non-Residen Legacy', path: '/main/ebupot/unifikasi/foreign', rolePermissionCode: 'EBUPOT_WITHHOLDING_VIEW' },
-      { key: 'ebupot-unifikasi-domestic-v2', show: true, label: 'BP Unifikasi/21/A0', path: '/main/ebupot-v2/unifikasi/domestic' },
-      { key: 'ebupot-unifikasi-foreign-v2', show: true, label: 'BP Non-Residen', path: '/main/ebupot-v2/unifikasi/foreign' },
-      { key: 'ebupot-v2-bp21', show: true, label: 'BP 21', path: '/main/ebupot-v2/bp21' },
-      { key: 'ebupot-v2-bp26', show: true, label: 'BP 26', path: '/main/ebupot-v2/bp26' },
-      { key: 'ebupot-v2-bpmp', show: true, label: 'BPMP', path: '/main/ebupot-v2/bpmp' },
-      { key: 'ebupot-v2-bpA1', show: true, label: 'BP A1', path: '/main/ebupot-v2/bpA1' },
-      { key: 'ebupot-v2-bpA2', show: true, label: 'BP A2', path: '/main/ebupot-v2/bpA2' },
-      { key: 'ebupot-article', show: true, label: 'PPh A1/A2', path: '/main/ebupot-v2/article' },
-      {
-        key: 'ebupot-payment',
-        show: true,
-        label: 'Pembayaran PPh',
-        children: [
-          { show: true, label: 'Penyetoran sendiri', path: '/main/ebupot-v2/self-payment' },
-          { show: true, label: 'Pemotongan digunggung', path: '/main/ebupot-v2/cumulative-payment' },
-        ],
-      },
-      { key: 'ebupot-unifikasi-import', show: true, label: 'Daftar Impor XLS', path: '/main/ebupot/unifikasi/import' },
-      { key: 'ebupot-unifikasi-spt', show: true, label: 'SPT', path: '/main/ebupot/unifikasi/spt', rolePermissionCode: 'EBUPOT_SPT_VIEW' },
-      {
-        key: 'ebupot-archive',
-        show: true,
-        label: 'Arsip',
-        path: '/main/ebupot/archive',
-        children: [
-          { key: 'ebupot-archive-pph23', show: true, label: 'PPh Pasal 23', path: '/main/ebupot/archive/pph23' },
-          { key: 'ebupot-archive-pph26', show: true, label: 'PPh Pasal 26', path: '/main/ebupot/archive/pph26' },
-          { key: 'ebupot-archive-import', show: true, label: 'Impor BP 23/26', path: '/main/ebupot/archive/import' },
-          { key: 'ebupot-archive-spt', show: true, label: 'SPT', path: '/main/ebupot/archive/spt' },
-        ],
-      },
-    ],
-  },
+  [
+    {
+      id: 'ebilling',
+      label: 'E-Billing',
+      icon: 'payslip',
+      path: '/main/ebilling/id_billing',
+      match: ['/main/ebilling'],
+      rolePermissionCode: 'EBILLING_VIEW',
+      panelTitle: 'E-Billing',
+      sections: [
+        {
+          title: 'E-Billing',
+          items: [
+            { id: 'ebilling-id', label: 'ID Billing', path: '/main/ebilling/id_billing', badge: 'payableCount' },
+            { id: 'ebilling-ntpn', label: 'NTPN', path: '/main/ebilling/ntpn' },
+            { id: 'ebilling-import', label: 'Impor ID Billing', path: '/main/ebilling/import' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'efiling',
+      label: 'Lapor Pajak',
+      icon: 'document-sent',
+      path: '/main/efiling/report-v2',
+      match: ['/main/efiling'],
+      rolePermissionCode: ['EFILING_VIEW', 'SPT_PPN_VIEW', 'SPT_UNIFIKASI_VIEW', 'SPT_2126_VIEW', 'EFILING_ARCHIVE_VIEW'],
+      sections: [
+        {
+          title: 'Lapor Pajak Coretax',
+          items: [
+            {
+              id: 'spt-masa',
+              label: 'SPT Masa',
+              path: '/main/efiling/report-v2/spt-masa/ppn',
+              children: [
+                { id: 'spt-masa-ppn', label: 'SPT Masa PPN', path: '/main/efiling/report-v2/spt-masa/ppn' },
+                { id: 'spt-masa-unifikasi', label: 'SPT Masa PPh Unifikasi', path: '/main/efiling/report-v2/spt-masa/unifikasi' },
+                { id: 'spt-masa-2126', label: 'SPT Masa PPh 21/26', path: '/main/efiling/report-v2/spt-masa/pph2126' },
+              ],
+            },
+            { id: 'spt-tahunan-badan-v2', label: 'SPT Tahunan Badan', path: '/main/efiling/report-v2/spt-tahunan-badan' },
+          ],
+        },
+        {
+          title: 'Lapor Pajak',
+          items: [
+            { id: 'efiling-spt-masa', label: 'E-Filing SPT Masa', path: '/main/efiling/report/spt-masa' },
+            { id: 'efiling-spt-tahunan', label: 'SPT Tahunan Badan', path: '/main/efiling/report/spt-tahunan' },
+            {
+              id: 'efiling-archive',
+              label: 'Arsip Pajak',
+              path: '/main/efiling/report/archived/paid',
+              children: [
+                { id: 'efiling-archive-paid', label: 'Pajak tidak wajib lapor', path: '/main/efiling/report/archived/paid' },
+                { id: 'efiling-archive-filed', label: 'Pajak siap lapor', path: '/main/efiling/report/archived/filed' },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'efaktur',
+      label: 'E-Faktur',
+      icon: 'doc',
+      path: '/main/efaktur-v2/out',
+      match: ['/main/efaktur'],
+      rolePermissionCode: 'EFAKTUR_VIEW',
+      sections: [
+        {
+          title: 'E-Faktur Coretax',
+          items: [
+            {
+              id: 'ctas-faktur',
+              label: 'Faktur',
+              path: '/main/efaktur-v2/out',
+              children: [
+                { id: 'ctas-faktur-out', label: 'Faktur keluaran', path: '/main/efaktur-v2/out' },
+                { id: 'ctas-faktur-in', label: 'Faktur masukan', path: '/main/efaktur-v2/in' },
+                { id: 'ctas-faktur-out-return', label: 'Retur faktur keluaran', path: '/main/efaktur-v2/out/return' },
+                { id: 'ctas-faktur-in-return', label: 'Retur faktur masukan', path: '/main/efaktur-v2/in/return' },
+              ],
+            },
+            {
+              id: 'ctas-doc',
+              label: 'Dokumen lain',
+              path: '/main/efaktur-v2/document/out',
+              children: [
+                { id: 'ctas-doc-out', label: 'Dokumen lain keluaran', path: '/main/efaktur-v2/document/out' },
+                { id: 'ctas-doc-in', label: 'Dokumen lain masukan', path: '/main/efaktur-v2/document/in' },
+                { id: 'ctas-doc-out-return', label: 'Retur dok. lain keluaran', path: '/main/efaktur-v2/document/out/return' },
+                { id: 'ctas-doc-in-return', label: 'Retur dok. lain masukan', path: '/main/efaktur-v2/document/in/return' },
+              ],
+            },
+            { id: 'ctas-import', label: 'Impor faktur pajak', path: '/main/efaktur-v2/import' },
+          ],
+        },
+        {
+          title: 'E-Faktur',
+          items: [
+            { id: 'nsfp', label: 'NSFP', path: '/main/efaktur/nsfp' },
+            {
+              id: 'faktur',
+              label: 'Faktur',
+              path: '/main/efaktur/out',
+              children: [
+                { id: 'faktur-out', label: 'Faktur keluaran', path: '/main/efaktur/out' },
+                { id: 'faktur-in', label: 'Faktur masukan', path: '/main/efaktur/in' },
+                { id: 'faktur-out-return', label: 'Retur faktur keluaran', path: '/main/efaktur/out/return' },
+                { id: 'faktur-in-return', label: 'Retur faktur masukan', path: '/main/efaktur/in/return' },
+              ],
+            },
+            {
+              id: 'doc',
+              label: 'Dokumen lain',
+              path: '/main/efaktur/document/out',
+              children: [
+                { id: 'doc-out', label: 'Dokumen lain keluaran', path: '/main/efaktur/document/out' },
+                { id: 'doc-in', label: 'Dokumen lain masukan', path: '/main/efaktur/document/in' },
+                { id: 'doc-out-return', label: 'Retur dok. lain keluaran', path: '/main/efaktur/document/out/return' },
+                { id: 'doc-in-return', label: 'Retur dok. lain masukan', path: '/main/efaktur/document/in/return' },
+              ],
+            },
+            { id: 'import', label: 'Impor faktur pajak', path: '/main/efaktur/import' },
+            { id: 'spt', label: 'SPT', path: '/main/efaktur/spt' },
+            {
+              id: 'reconcile',
+              label: 'Rekonsiliasi',
+              path: '/main/efaktur/reconcile',
+              isPremium: true,
+              // "Rekapitulasi" is only shown to reconcile users (childPermissionGranted).
+              children: [
+                { id: 'reconcile-list', label: 'Daftar rekonsiliasi', path: '/main/efaktur/reconcile' },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'ebupot',
+      label: 'E-Bupot',
+      icon: 'expenses',
+      path: '/main/ebupot-v2/unifikasi/domestic',
+      match: ['/main/ebupot'],
+      rolePermissionCode: 'EBUPOT_VIEW',
+      sections: [
+        {
+          title: 'E-Bupot Coretax',
+          items: [
+            { id: 'ctas-bp-unifikasi', label: 'BP Unifikasi', path: '/main/ebupot-v2/unifikasi/domestic' },
+            { id: 'ctas-bp-foreign', label: 'BP Non-Residen', path: '/main/ebupot-v2/unifikasi/foreign' },
+            { id: 'ctas-self-payment', label: 'Penyetoran sendiri', path: '/main/ebupot-v2/self-payment' },
+            { id: 'ctas-cumulative-payment', label: 'Pemotongan digunggung', path: '/main/ebupot-v2/cumulative-payment' },
+            { id: 'ctas-bp21', label: 'BP 21', path: '/main/ebupot-v2/bp21' },
+            { id: 'ctas-bp26', label: 'BP 26', path: '/main/ebupot-v2/bp26' },
+            { id: 'ctas-bpmp', label: 'BPMP', path: '/main/ebupot-v2/bpmp' },
+            { id: 'ctas-bpa1', label: 'BP A1', path: '/main/ebupot-v2/bpA1' },
+            { id: 'ctas-bpa2', label: 'BP A2', path: '/main/ebupot-v2/bpA2' },
+            { id: 'ctas-import', label: 'Daftar impor', path: '/main/ebupot-v2/import' },
+          ],
+        },
+        {
+          title: 'E-Bupot',
+          items: [
+            { id: 'bp-unifikasi', label: 'BP Unifikasi', path: '/main/ebupot/unifikasi/domestic' },
+            { id: 'bp-foreign', label: 'BP Non-Residen', path: '/main/ebupot/unifikasi/foreign' },
+            { id: 'bp-import', label: 'Daftar impor XLS', path: '/main/ebupot/unifikasi/import' },
+            {
+              id: 'bp-spt',
+              label: 'SPT',
+              path: '/main/ebupot/unifikasi/spt',
+              children: [
+                { id: 'bp-spt-unifikasi', label: 'SPT Unifikasi', path: '/main/ebupot/unifikasi/spt' },
+              ],
+            },
+            {
+              id: 'bp-archive',
+              label: 'Arsip',
+              path: '/main/ebupot/archive/pph23',
+              children: [
+                { id: 'bp-archive-pph23', label: 'PPh Pasal 23', path: '/main/ebupot/archive/pph23' },
+                { id: 'bp-archive-pph26', label: 'PPh Pasal 26', path: '/main/ebupot/archive/pph26' },
+                { id: 'bp-archive-import', label: 'Impor BP 23/26', path: '/main/ebupot/archive/import' },
+                { id: 'bp-archive-spt', label: 'SPT', path: '/main/ebupot/archive/spt' },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+    { id: 'npwp', label: 'Pengecekan NPWP', icon: 'id-card', path: '/v2/main/check-npwp', match: ['/v2/main/check-npwp'] },
+  ],
+  [
+    {
+      id: 'audit-log',
+      label: 'Riwayat aktivitas',
+      icon: 'log',
+      path: '/v2/main/audit-log',
+      match: ['/v2/main/audit-log'],
+      rolePermissionCode: 'AUDIT_LOG_VIEW',
+    },
+    {
+      id: 'setting',
+      label: 'Pengaturan',
+      icon: 'settings',
+      path: '/main/setting/account/tax',
+      match: ['/main/setting', '/v2/main/setting'],
+      panelTitle: 'Pengaturan',
+      sections: [
+        {
+          title: 'Pengaturan',
+          items: [
+            {
+              id: 'setting-account',
+              label: 'Akun',
+              icon: 'profile',
+              path: '/main/setting/account/profile',
+              children: [
+                { id: 'setting-profile', label: 'Profil akun', path: '/main/setting/account/profile' },
+                { id: 'setting-company-list', label: 'Perusahaan terdaftar', path: '/main/setting/account/company/list' },
+              ],
+            },
+            {
+              id: 'setting-company',
+              label: 'Perusahaan',
+              icon: 'company',
+              path: '/main/setting/account/tax',
+              children: [
+                { id: 'setting-tax', label: 'Profil perusahaan', path: '/main/setting/account/tax' },
+                { id: 'setting-certificate', label: 'Sertifikat elektronik', path: '/main/setting/account/certificate' },
+                { id: 'setting-quota', label: 'Manajemen kuota', path: '/v2/main/setting/quota-management' },
+                { id: 'setting-nsfp-reminder', label: 'NSFP Reminder', path: '/main/setting/account/nsfp-reminder' },
+                { id: 'setting-email', label: 'Pengiriman data pajak', path: '/main/setting/account/company/email/efaktur' },
+                { id: 'setting-users', label: 'Manajemen pengguna', path: '/v2/main/setting/company-associate/user/list' },
+              ],
+            },
+            {
+              id: 'setting-signee',
+              label: 'Penandatanganan',
+              icon: 'esignature',
+              path: '/v2/main/setting/unified-signee',
+              children: [
+                { id: 'setting-signee-coretax', label: 'Coretax', path: '/v2/main/setting/unified-signee' },
+                {
+                  id: 'setting-signee-legacy',
+                  label: 'Legacy',
+                  path: '/main/setting/account/signee/efaktur',
+                  children: [
+                    { id: 'signee-efaktur', label: 'Faktur', path: '/main/setting/account/signee/efaktur' },
+                    { id: 'signee-spt1771', label: 'SPT Tahunan Badan', path: '/main/setting/account/signee/spt1771' },
+                    { id: 'signee-ebupot', label: 'E-Bupot', path: '/main/setting/account/signee/ebupot' },
+                    { id: 'signee-ebupot-archive', label: 'Bupot PPh 23/26', path: '/main/setting/account/signee/ebupot-archive' },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
 ]
 
-/** Recursively drop hidden items (and groups left empty). */
-export function visibleItems(items: NavItem[], { mobile = false } = {}): NavItem[] {
-  return items
-    .filter(item => item.show && (mobile || !item.isMobileOnly))
-    .map(item => (item.children ? { ...item, children: visibleItems(item.children, { mobile }) } : item))
-    .filter(item => !item.children || item.children.length > 0)
+export const allModules = sidebarGroups.flat()
+
+function matchesPrefix(path: string, prefix: string) {
+  return path === prefix || path.startsWith(prefix.endsWith('/') ? prefix : `${prefix}/`) || path.startsWith(`${prefix}-`)
 }
 
-/** Source rule: prefix match when matchPrefix is set, otherwise exact path. */
-export function isNavItemActive(item: NavItem, currentPath: string): boolean {
-  if (item.matchPrefix) return currentPath.startsWith(item.matchPrefix)
-  return item.path === currentPath
+/** The module owning the current path (source: route name includes target.parent). */
+export function activeModule(path: string): NavModule | undefined {
+  return allModules.find(m => m.match.some(prefix => matchesPrefix(path, prefix)))
 }
 
-/** Find the deepest nav label for a path — used by placeholder pages. */
-export function findNavLabel(path: string, items: NavItem[] = navigation, trail: string[] = []): string[] | null {
-  for (const item of items) {
-    const next = [...trail, item.label]
-    if (item.path === path) return next
-    if (item.children) {
-      const hit = findNavLabel(path, item.children, next)
-      if (hit) return hit
+function leaves(items: NavLeaf[]): NavLeaf[] {
+  return items.flatMap(i => (i.children ? leaves(i.children) : [i]))
+}
+
+/**
+ * The single leaf to highlight: exact match, else the longest leaf path that is
+ * a parent segment of the current path (so /main/efaktur-v2/out/create keeps
+ * "Faktur keluaran" active but /main/efaktur-v2/out/return picks its own item).
+ */
+export function activeLeafPath(path: string, module?: NavModule): string | undefined {
+  if (!module?.sections) return undefined
+  const paths = module.sections.flatMap(s => leaves(s.items)).map(l => l.path)
+  if (paths.includes(path)) return path
+  return paths
+    .filter(p => path.startsWith(`${p}/`))
+    .sort((a, b) => b.length - a.length)[0]
+}
+
+export function containsPath(item: NavLeaf, path: string | undefined): boolean {
+  if (!path) return false
+  if (item.path === path && !item.children) return true
+  return !!item.children?.some(c => containsPath(c, path))
+}
+
+/** Breadcrumb labels for placeholder pages. */
+export function findNavTrail(path: string): string[] | null {
+  const module = activeModule(path)
+  if (!module) return null
+  if (!module.sections) return module.path === path ? [module.label] : null
+  const target = activeLeafPath(path, module)
+  if (!target) return [module.label]
+  const walk = (items: NavLeaf[], trail: string[]): string[] | null => {
+    for (const item of items) {
+      const next = [...trail, item.label]
+      if (item.children) {
+        const hit = walk(item.children, next)
+        if (hit) return hit
+      }
+      else if (item.path === target) {
+        return next
+      }
     }
+    return null
   }
-  return null
+  for (const section of module.sections) {
+    const hit = walk(section.items, [module.label])
+    if (hit) return hit
+  }
+  return [module.label]
 }

@@ -6,8 +6,9 @@ Done so far: **boilerplate only** — shell, nav, layouts, placeholders.
 ## Phase 0 — Boilerplate ✅
 
 - Nuxt 4 + Pixel 3 (token 2.4, default product theme)
-- Klikpajak top-nav shell: logo, main menu (3-level dropdowns), mobile drawer,
-  Daftar Efin button, product selector, company/account menu
+- Klikpajak shell matching production (`components/Pixel/*`): fixed header
+  (quick access, app switcher, account/company menu), first-level sidebar,
+  second-level panel per module, collapse + keyboard shortcuts, mobile drawer
 - `default` and `blank` layouts
 - Catch-all placeholder so every source URL resolves
 
@@ -22,7 +23,7 @@ Done so far: **boilerplate only** — shell, nav, layouts, placeholders.
 | Status tags | `components/approvalStatus`, `components/label` | Map source statuses → `MpBadge`/`MpTag` |
 | Formatting utils (NPWP, Rupiah, terbilang, dates) | `formatting`, `helper`, `shared/helpers` | Pure TS ports |
 | Mock data layer + persistence | `store/*`, `api/*` | Typed seed data in `app/data/*` |
-| Permission gating (`rolePermissionCode`) | `router/index.js`, `store/auth/roles` | Nav already carries the codes |
+| Permission + feature-flag gating | `router/index.js`, `store/auth/roles`, `menuList.js` (`basedOnPermissions`, CTAS flags) | Nav is currently the fully-activated Coretax tree; `rolePermissionCode` is kept on modules |
 
 ## Phase 2 — Modules (suggested order)
 
@@ -37,8 +38,9 @@ Ordered by how central the module is to daily use and how much it reuses Phase 1
 | 5 | E-Bupot unifikasi + Arsip | `router/ebupot` (`/main/ebupot/*`) | 47 | LayoutContainer, EbupotList | E-Bupot › SPT / Arsip |
 | 6 | E-Billing | `router/ebilling` | 15 | LayoutContainer | E-Billing |
 | 7 | E-Filing / Lapor Pajak | `router/efiling` | 54 | LayoutContainer | Lapor Pajak |
-| 8 | Settings | `router/setting` | 28 | LayoutContainer | User menu › Pengaturan |
+| 8 | Settings | `router/setting` | 28 | LayoutContainer | Pengaturan |
 | 9 | EFIN register + migration | `router/efin`, `router/migrationEfin` | 7 | MekariPixel | Daftar Efin button |
+| 9b | Pengecekan NPWP, Riwayat aktivitas, Manajemen kuota/pengguna, Penandatanganan Coretax | decoupled `/v2/*` app (not in this repo) | — | — | Sidebar |
 | 10 | E-Registration | `router/eregistration` | 17 | Eregistration | — |
 | 11 | Onboarding, company setup, public | `router/onboarding`, `companySetup`, `public` | 12 | Blank / Plain | — |
 | 12 | Admin (internal back-office) | `router/admin` | 23 | Admin | — (separate shell) |

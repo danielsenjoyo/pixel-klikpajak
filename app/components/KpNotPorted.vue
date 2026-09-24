@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { MpButton, MpIcon, MpText } from '@mekari/pixel3'
-import { findNavLabel } from '~/data/navigation'
+import { findNavTrail } from '~/data/navigation'
 
 // Placeholder for any route whose module hasn't been ported yet. Shows where the
 // route sits in the nav and the source path to port from (docs/ROADMAP.md).
 const props = defineProps<{ title?: string }>()
 const route = useRoute()
-const trail = computed(() => findNavLabel(route.path) ?? [])
+const trail = computed(() => findNavTrail(route.path) ?? [])
 const heading = computed(() => props.title ?? trail.value.at(-1) ?? route.path)
 </script>
 

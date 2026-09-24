@@ -8,5 +8,10 @@ export function useSession() {
     companyId.value = id
   }
 
-  return { session, companies, company, companyId, switchCompany }
+  function logout() {
+    // Source posts to /logout; the prototype just returns to the dashboard.
+    navigateTo('/main/home')
+  }
+
+  return { session, companies, company, companyId, switchCompany, logout }
 }
