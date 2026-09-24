@@ -43,7 +43,7 @@ function toggleGroup(s: SptSection) {
       <button
         v-tooltip="{ label: isCollapsed ? 'Tampilkan daftar bagian' : 'Sembunyikan daftar bagian', placement: 'right' }"
         type="button"
-        class="spt-nav__toggle"
+        class="kp-icon-btn kp-icon-btn--compact spt-nav__toggle"
         :aria-label="isCollapsed ? 'Tampilkan daftar bagian' : 'Sembunyikan daftar bagian'"
         :aria-expanded="!isCollapsed"
         @click="isCollapsed = !isCollapsed"
@@ -62,6 +62,7 @@ function toggleGroup(s: SptSection) {
 
         <ul class="spt-nav__list">
           <li v-for="s in SPT_SECTIONS" :key="s.key">
+            <!-- pixel-police-allow: expand/collapse nav group — Pixel 3 has no nav component (rules.md → exceptions) -->
             <button
               v-if="s.children"
               type="button"
@@ -150,25 +151,16 @@ function toggleGroup(s: SptSection) {
   top: var(--mp-spacing-2);
   right: var(--mp-spacing-1);
   z-index: 1;
-  display: inline-flex;
-  padding: 6px;
-  border: 0;
+  padding: var(--mp-spacing-2xs);
   border-radius: var(--mp-radii-md);
-  background: transparent;
-  color: var(--mp-colors-icon-default);
-  cursor: pointer;
 }
 .spt-nav__toggle:hover {
   background: var(--mp-colors-background-brand);
 }
-.spt-nav__toggle:focus-visible {
-  outline: none;
-  box-shadow: var(--mp-shadows-focus);
-}
 .spt-nav-col--collapsed .spt-nav__toggle {
   right: auto;
   left: 0;
-  padding: 6px 2px;
+  padding: var(--mp-spacing-2xs) var(--mp-spacing-4xs);
 }
 
 .spt-nav__status {
@@ -187,13 +179,13 @@ function toggleGroup(s: SptSection) {
 .spt-nav__list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--mp-spacing-4xs);
   margin: 0;
   padding: var(--mp-spacing-4) 0 0;
   list-style: none;
 }
 .spt-nav__list--nested {
-  padding: 2px 0 0 var(--mp-spacing-3);
+  padding: var(--mp-spacing-4xs) 0 0 var(--mp-spacing-3);
 }
 
 .spt-nav__item {

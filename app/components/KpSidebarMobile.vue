@@ -19,10 +19,6 @@ function close() {
   isMobileOpen.value = false
 }
 
-function go(path: string) {
-  close()
-  navigateTo(path)
-}
 </script>
 
 <template>
@@ -41,15 +37,16 @@ function go(path: string) {
         <nav class="kp-sbm__menu" aria-label="Menu utama">
           <template v-for="(group, index) in sidebarGroups" :key="index">
             <template v-for="item in group" :key="item.id">
-              <button
-                type="button"
+              <NuxtLink
+                :to="item.path"
                 class="kp-sbm__item"
                 :class="{ 'kp-sbm__item--active': isActive(item) }"
-                @click="go(item.path)"
+                :aria-current="isActive(item) ? 'page' : undefined"
+                @click="close"
               >
                 <MpIcon :name="item.icon" size="md" :variant="isActive(item) ? 'fill' : 'outline'" />
                 {{ item.label }}
-              </button>
+              </NuxtLink>
               <div v-for="section in item.sections ?? []" :key="section.title" class="kp-sbm__section">
                 <div v-if="(item.sections?.length ?? 0) > 1" class="kp-sbm__title">{{ section.title }}</div>
                 <KpSidebarItem
@@ -66,6 +63,7 @@ function go(path: string) {
 
           <template v-if="!session.isJurnalUser">
             <MpDivider class="kp-sbm__divider" />
+            <!-- pixel-police-allow: menu row styled like the nav links above (rules.md → exceptions) -->
             <button type="button" class="kp-sbm__item" @click="close(); logout()">
               <MpIcon name="sign-out" size="md" />
               Keluar
@@ -83,7 +81,7 @@ function go(path: string) {
   align-items: center;
   gap: var(--mp-spacing-2);
   margin-bottom: var(--mp-spacing-6);
-  padding: 10px var(--mp-spacing-2);
+  padding: var(--kp-sidebar-inset) var(--mp-spacing-2);
 }
 .kp-sbm__company-text {
   display: flex;
@@ -96,7 +94,7 @@ function go(path: string) {
   align-items: center;
   gap: var(--mp-spacing-2);
   width: 100%;
-  padding: var(--mp-spacing-2) 10px;
+  padding: var(--mp-spacing-2) var(--kp-sidebar-inset);
   border: 0;
   border-radius: var(--mp-radii-md);
   background: transparent;
@@ -104,6 +102,7 @@ function go(path: string) {
   font: inherit;
   font-size: var(--mp-font-sizes-md);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
 }
 .kp-sbm__item:hover {
@@ -123,7 +122,7 @@ function go(path: string) {
   color: var(--mp-colors-text-selected);
   font-size: var(--mp-font-sizes-sm);
   font-weight: var(--mp-font-weights-semi-bold);
-  letter-spacing: 2px;
+  letter-spacing: var(--mp-letter-spacings-widest);
   text-transform: uppercase;
 }
 

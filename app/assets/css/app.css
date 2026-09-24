@@ -6,6 +6,8 @@
 
 :root {
   --kp-header-height: 56px;
+  /* Sidebar / sub-panel row inset from production Klikpajak (10px) — no single spacing token. */
+  --kp-sidebar-inset: calc(var(--mp-spacing-2) + var(--mp-spacing-4xs));
 }
 
 *,
@@ -44,6 +46,18 @@ body {
 .kp-icon-btn:focus-visible {
   outline: none;
   box-shadow: var(--mp-shadows-focus);
+}
+.kp-icon-btn:disabled {
+  background: transparent;
+  color: var(--mp-colors-icon-disabled);
+  cursor: not-allowed;
+}
+/* Compact: sized by its padding (toggles, pagination arrows) instead of the 40px square. */
+.kp-icon-btn--compact {
+  width: auto;
+  height: auto;
+  padding: var(--mp-spacing-1);
+  border-radius: var(--mp-radii-sm);
 }
 
 /* Visually hidden, still read by screen readers. */

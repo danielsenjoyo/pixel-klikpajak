@@ -28,6 +28,7 @@ function pickCompany(id: number, close: () => void) {
     v-slot="{ onClosePopover }"
     @close="view = 'main'"
   >
+    <!-- pixel-police-allow: composite trigger (avatar + name + NPWP) — no Pixel equivalent (rules.md → exceptions) -->
     <MpPopoverTrigger>
       <button type="button" class="kp-account" aria-label="Buka menu akun">
         <MpAvatar :name="company.name" size="lg" variant-color="pink" />
@@ -63,7 +64,7 @@ function pickCompany(id: number, close: () => void) {
 
       <template v-else>
         <div class="kp-account__subhead">
-          <button type="button" class="kp-account__back" aria-label="Kembali" @click="view = 'main'">
+          <button type="button" class="kp-icon-btn kp-icon-btn--compact kp-account__back" aria-label="Kembali" @click="view = 'main'">
             <MpIcon name="arrows-left" size="sm" />
           </button>
           <MpText weight="semiBold">Company list</MpText>
@@ -148,12 +149,7 @@ function pickCompany(id: number, close: () => void) {
   border-bottom: 1px solid var(--mp-colors-border-default);
 }
 .kp-account__back {
-  display: inline-flex;
   padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--mp-colors-icon-default);
-  cursor: pointer;
 }
 
 .kp-account__list {

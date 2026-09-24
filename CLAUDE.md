@@ -120,7 +120,7 @@ Design-system compliance, ported from pixel-jurnal. Two halves:
   **plus the working tree**, untracked files included. Runs on `git push` (`.githooks/pre-push`,
   wired by `npm install` via `core.hooksPath`, together with `npm run build`) and in CI
   (`.github/workflows/ci.yml`). A genuine, documented exception gets a `pixel-police-allow`
-  comment on the line (or the line above a multi-line tag) — and the exception written into the
+  comment on the line (or the line above a multi-line tag / a bare wrapper tag) — and the exception written into the
   rule list in the same change. Escape hatches for emergencies: `PIXEL_POLICE_SKIP=1` /
   `BUILD_SKIP=1 git push`.
 - **The `pixel-police` skill** (`.agents/skills/pixel-police/`, linked from `.claude/skills/`) —

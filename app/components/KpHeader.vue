@@ -50,7 +50,7 @@ const { isMobileOpen } = useSidebar()
   align-items: center;
   justify-content: space-between;
   height: var(--kp-header-height);
-  padding: 6px var(--mp-spacing-6);
+  padding: var(--mp-spacing-2xs) var(--mp-spacing-6);
   border-bottom: 1px solid var(--mp-colors-border-default);
   background: var(--mp-colors-background-stage);
 }
@@ -72,7 +72,7 @@ const { isMobileOpen } = useSidebar()
 
 @media (max-width: 991px) {
   .kp-header {
-    padding: 6px var(--mp-spacing-4);
+    padding: var(--mp-spacing-2xs) var(--mp-spacing-4);
   }
   .kp-header__burger {
     display: inline-flex;

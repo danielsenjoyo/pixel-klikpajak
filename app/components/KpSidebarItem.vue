@@ -16,16 +16,12 @@ const isOpen = ref(true)
 const isActive = computed(() => !props.item.children && props.item.path === props.activePath)
 const hasActiveChild = computed(() => !!props.item.children && containsPath(props.item, props.activePath))
 const badgeValue = computed(() => (props.item.badge ? session.sidebarBadges[props.item.badge] : undefined))
-
-function go() {
-  emit('navigate')
-  navigateTo(props.item.path)
-}
 </script>
 
 <template>
   <div class="kp-si">
     <template v-if="item.children">
+      <!-- pixel-police-allow: expand/collapse nav group — Pixel 3 has no nav component (rules.md → exceptions) -->
       <button
         type="button"
         class="kp-si__row"
@@ -51,18 +47,18 @@ function go() {
       </div>
     </template>
 
-    <button
+    <NuxtLink
       v-else
-      type="button"
+      :to="item.path"
       class="kp-si__row"
       :class="[`kp-si__row--depth-${depth}`, { 'kp-si__row--inset': inset, 'kp-si__row--active': isActive }]"
       :aria-current="isActive ? 'page' : undefined"
-      @click="go"
+      @click="emit('navigate')"
     >
       <MpIcon v-if="item.icon" :name="item.icon" size="md" />
       <span class="kp-si__label">{{ item.label }}</span>
       <MpBadge v-if="badgeValue" for="indicator" type="critical">{{ badgeValue }}</MpBadge>
-    </button>
+    </NuxtLink>
   </div>
 </template>
 
@@ -80,6 +76,7 @@ function go() {
   font: inherit;
   font-size: var(--mp-font-sizes-md);
   text-align: left;
+  text-decoration: none;
   cursor: pointer;
   transition: background-color 200ms ease, color 200ms ease;
 }

@@ -9,8 +9,10 @@ means "nothing obviously off-system was added", not "this screen is correct".
 Checked on **added lines only**, in changed `app/**/*.vue` and `app/**/*.css` files, against
 the merge-base with `origin/main` (or `main`). "Changed" spans the commits since that base
 _and_ the working tree — staged, unstaged and untracked — so a rule fires on work that isn't
-committed yet. Comment-only lines are skipped. A line is exempt when it, or a comment on the
-line directly above it, contains `pixel-police-allow`.
+committed yet. Comment-only lines are skipped. A line is exempt when it contains
+`pixel-police-allow`, or a comment directly above it does — or a comment above one bare
+wrapper tag (`<MpPopoverTrigger>`), since that component clones its first child and a comment
+inside it would be cloned instead of the button.
 
 | Rule id                            | Where           | Violation                                                                 | Fix                                                                                    | Source                             |
 | ---------------------------------- | --------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------- |
@@ -39,13 +41,20 @@ Multi-line opening tags are read as a whole, so `<button` on one line with
 | `1px` (hairlines, the `.kp-sr-only` clip)                                  | no token for a hairline                                                               |
 | px `width` / `height` / `top` / `min-width` …                             | Figma-spec'd layout sizes with no token — comment the source next to them            |
 
-### Pre-existing deliberate cases (not flagged — the gate only reads added lines)
+### Documented exceptions (marked `pixel-police-allow` in the code)
 
-`npm run pixel-police -- --all` lists them: the sidebar / sub-panel / mobile-drawer
-row buttons, `SptSectionNav` rows and toggle, `KpPagination` and `KpAccountMenu`
-triggers (custom-styled controls matching production), and Figma px paddings in
-the header and sidebar (6px / 10px / 2px). Touching one of those lines re-checks
-it — keep the value and add `pixel-police-allow`, or move it to a token.
+| Where                                                                | Why                                                                                        |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `KpSidebarItem` group row, `SptSectionNav` group row (expand/collapse) | Pixel 3 ships no navigation component; the rows match production Klikpajak's sidebar. Leaf rows are `NuxtLink`s. |
+| `KpSidebarMobile` "Keluar" row                                        | an action styled as one of the drawer's nav rows                                            |
+| `KpAccountMenu` trigger (avatar + company name + NPWP)                | a two-line composite trigger; `MpButton` has a fixed height. The allow comment sits above `<MpPopoverTrigger>`, which clones its first child |
+
+Icon-only buttons use `.kp-icon-btn` (40px square) or `.kp-icon-btn kp-icon-btn--compact`
+(padding-sized: collapse toggles, pagination arrows, the account-menu back arrow), with a
+shared `:disabled` state. The sidebar's 10px row inset from production is `--kp-sidebar-inset`
+(`--mp-spacing-2` + `--mp-spacing-4xs`) in `app/assets/css/app.css`.
+
+`npm run pixel-police -- --all` is clean — keep it that way.
 
 ## Tier 2 — reviewer-only (the script cannot see these)
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MpIcon, MpPopover, MpPopoverContent, MpPopoverList, MpPopoverListItem, MpPopoverTrigger, MpSelect, MpText } from '@mekari/pixel3'
+import { MpButton, MpIcon, MpPopover, MpPopoverContent, MpPopoverList, MpPopoverListItem, MpPopoverTrigger, MpSelect, MpText } from '@mekari/pixel3'
 
 // Table pagination (Figma "Paginations"; Pixel 3 ships none):
 // [Baris per halaman 10 ▾] [Menampilkan x dari y] ........ [page ▾] dari n halaman [‹] [›]
@@ -36,10 +36,9 @@ function goTo(page: number) {
         <MpText color="text.secondary">Baris per halaman</MpText>
         <MpPopover :id="`${id}-per-page`" placement="top-start" trigger="click" use-portal v-slot="{ onClosePopover }">
           <MpPopoverTrigger>
-            <button type="button" class="kp-pagination__per-page-btn" aria-label="Baris per halaman">
+            <MpButton :id="`${id}-per-page-btn`" variant="ghost" size="sm" right-icon="caret-down" aria-label="Baris per halaman">
               {{ perPage }}
-              <MpIcon name="caret-down" size="sm" />
-            </button>
+            </MpButton>
           </MpPopoverTrigger>
           <MpPopoverContent class="kp-pagination-panel">
             <MpPopoverList>
@@ -76,10 +75,10 @@ function goTo(page: number) {
         <MpText color="text.secondary">dari {{ totalPages }} halaman</MpText>
       </div>
       <div class="kp-pagination__nav">
-        <button type="button" class="kp-pagination__nav-btn" :disabled="page <= 1" aria-label="Halaman sebelumnya" @click="goTo(page - 1)">
+        <button type="button" class="kp-icon-btn kp-icon-btn--compact" :disabled="page <= 1" aria-label="Halaman sebelumnya" @click="goTo(page - 1)">
           <MpIcon name="chevrons-left" size="sm" />
         </button>
-        <button type="button" class="kp-pagination__nav-btn" :disabled="page >= totalPages" aria-label="Halaman berikutnya" @click="goTo(page + 1)">
+        <button type="button" class="kp-icon-btn kp-icon-btn--compact" :disabled="page >= totalPages" aria-label="Halaman berikutnya" @click="goTo(page + 1)">
           <MpIcon name="chevrons-right" size="sm" />
         </button>
       </div>
@@ -117,26 +116,6 @@ function goTo(page: number) {
   gap: var(--mp-spacing-3);
 }
 
-.kp-pagination__per-page-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--mp-spacing-1);
-  padding: var(--mp-spacing-1) var(--mp-spacing-2) var(--mp-spacing-1) var(--mp-spacing-3);
-  border: 0;
-  border-radius: var(--mp-radii-sm);
-  background: transparent;
-  color: var(--mp-colors-text-default);
-  font: inherit;
-  font-size: var(--mp-font-sizes-md);
-  cursor: pointer;
-}
-.kp-pagination__per-page-btn:hover {
-  background: var(--mp-colors-background-neutral-hovered);
-}
-.kp-pagination__per-page-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--mp-shadows-focus);
-}
 
 /* Figma draws 64px; Pixel's MpSelect has an 88px min-width, so size to that. */
 .kp-pagination__select {
@@ -156,28 +135,6 @@ function goTo(page: number) {
   gap: var(--mp-spacing-2);
 }
 
-.kp-pagination__nav-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--mp-spacing-1);
-  border: 0;
-  border-radius: var(--mp-radii-sm);
-  background: transparent;
-  color: var(--mp-colors-icon-default);
-  cursor: pointer;
-}
-.kp-pagination__nav-btn:hover:not(:disabled) {
-  background: var(--mp-colors-background-neutral-hovered);
-}
-.kp-pagination__nav-btn:disabled {
-  color: var(--mp-colors-icon-disabled);
-  cursor: not-allowed;
-}
-.kp-pagination__nav-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--mp-shadows-focus);
-}
 </style>
 
 <style>

@@ -76,7 +76,7 @@ function onLeave() {
           placement: 'right',
         }"
         type="button"
-        class="kp-sb__toggle"
+        class="kp-icon-btn kp-icon-btn--compact kp-sb__toggle"
         :aria-label="isParentCollapsed ? 'Tampilkan daftar fitur' : 'Sembunyikan daftar fitur'"
         @click="toggleParent"
       >
@@ -125,7 +125,7 @@ function onLeave() {
   display: flex;
   align-items: center;
   gap: var(--mp-spacing-2);
-  padding: var(--mp-spacing-2) 10px;
+  padding: var(--mp-spacing-2) var(--kp-sidebar-inset);
   border-radius: var(--mp-radii-md);
   color: var(--mp-colors-text-default);
   font-size: var(--mp-font-sizes-md);
@@ -171,23 +171,11 @@ function onLeave() {
 }
 
 .kp-sb__toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   flex-shrink: 0;
-  padding: var(--mp-spacing-2) 10px;
-  border: 0;
-  border-radius: var(--mp-radii-sm);
-  background: transparent;
-  color: var(--mp-colors-icon-default);
-  cursor: pointer;
+  padding: var(--mp-spacing-2) var(--kp-sidebar-inset);
 }
 .kp-sb__toggle:hover {
   background: var(--mp-colors-background-brand);
-}
-.kp-sb__toggle:focus-visible {
-  outline: none;
-  box-shadow: var(--mp-shadows-focus);
 }
 
 .kp-sb__company {

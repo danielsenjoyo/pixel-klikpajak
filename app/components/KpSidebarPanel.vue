@@ -45,7 +45,7 @@ function onStripClick() {
           placement: 'right',
         }"
         type="button"
-        class="kp-panel__toggle"
+        class="kp-icon-btn kp-icon-btn--compact kp-panel__toggle"
         :aria-label="isChildCollapsed ? 'Tampilkan daftar fitur' : 'Sembunyikan daftar fitur'"
         @click.stop="toggleChild"
       >
@@ -100,7 +100,7 @@ function onStripClick() {
   color: var(--mp-colors-text-selected);
   font-size: var(--mp-font-sizes-sm);
   font-weight: var(--mp-font-weights-semi-bold);
-  letter-spacing: 2px;
+  letter-spacing: var(--mp-letter-spacings-widest);
   text-transform: uppercase;
 }
 
@@ -117,23 +117,11 @@ function onStripClick() {
 }
 
 .kp-panel__toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--mp-spacing-2) 10px;
-  border: 0;
-  border-radius: var(--mp-radii-sm);
-  background: transparent;
-  color: var(--mp-colors-icon-default);
-  cursor: pointer;
+  padding: var(--mp-spacing-2) var(--kp-sidebar-inset);
   transition: transform 300ms ease;
 }
 .kp-panel__toggle:hover {
   background: var(--mp-colors-background-brand);
-}
-.kp-panel__toggle:focus-visible {
-  outline: none;
-  box-shadow: var(--mp-shadows-focus);
 }
 /* Collapsed: the toggle becomes a half-round tab sticking out of the strip. */
 .kp-panel--collapsed .kp-panel__toggle {

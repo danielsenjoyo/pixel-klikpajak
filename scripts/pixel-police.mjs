@@ -16,7 +16,9 @@
  * untracked files — so running it on uncommitted work checks that work.
  *
  * Escape hatch: `pixel-police-allow` in a trailing comment on the line, or in a comment on
- * the line directly above (for multi-line tags, where a comment can't go inside the tag).
+ * the line directly above (for multi-line tags, where a comment can't go inside the tag). The
+ * comment may also sit above one bare wrapper tag such as `<MpPopoverTrigger>`, which clones
+ * its first child and would clone a comment placed inside it.
  * Use it for documented exceptions only, and write the exception into docs/ in the same change.
  */
 import { execFileSync } from 'node:child_process'
@@ -160,6 +162,14 @@ const RULES = [
 const isCommentOnly = l => /^\s*(\/\/|\/\*|\*|<!--)/.test(l)
 const ALLOW = 'pixel-police-allow'
 
+/** Allowed via a comment on the line, directly above it, or above one bare `<Wrapper>` line. */
+function isAllowed(lines, i) {
+  if (lines[i].includes(ALLOW)) return true
+  let j = i - 1
+  if (j >= 0 && /^\s*<[A-Za-z][\w-]*>\s*$/.test(lines[j])) j--
+  return j >= 0 && isCommentOnly(lines[j]) && lines[j].includes(ALLOW)
+}
+
 /** 'template' | 'script' | 'style' for each line (CSS files are all 'style'). */
 function sections(file, lines) {
   if (file.endsWith('.css')) return lines.map(() => 'style')
@@ -217,7 +227,7 @@ function main() {
       const i = n - 1
       const line = lines[i]
       if (line === undefined || isCommentOnly(line)) continue
-      if (line.includes(ALLOW) || (i > 0 && isCommentOnly(lines[i - 1]) && lines[i - 1].includes(ALLOW))) continue
+      if (isAllowed(lines, i)) continue
       const ctx = { line, section: sect[i], tag: sect[i] === 'template' ? tagAt(lines, i) : null, vars }
       for (const rule of RULES) {
         if (rule.where !== 'any' && rule.where !== ctx.section) continue
