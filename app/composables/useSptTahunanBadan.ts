@@ -16,7 +16,7 @@ export function useSptTahunanBadan() {
   function create(year: number): SptTahunanBadan {
     const revisions = list.value.filter(s => s.year === year).map(s => s.revision)
     const revision = revisions.length ? Math.max(...revisions) + 1 : 0
-    const spt: SptTahunanBadan = { id: `sptb-${year}-${revision}-${Date.now()}`, year, revision, status: 'READY', ntte: null }
+    const spt: SptTahunanBadan = { id: `sptb-${year}-${revision}-${Date.now()}`, year, revision, status: 'READY', ntte: null, postedAt: null }
     list.value = [spt, ...list.value]
     return spt
   }
@@ -29,10 +29,21 @@ export function useSptTahunanBadan() {
     return list.value.find(s => s.id === id)
   }
 
+  /**
+   * Posting SPT — commit the working figures so the SPT reflects the source data, and stamp
+   * the time the section menu reports. Separate from Lapor: posting can be repeated, and it
+   * sends nothing to DJP.
+   */
+  function post(id: string) {
+    const at = new Date().toISOString()
+    list.value = list.value.map(s => (s.id === id ? { ...s, postedAt: at } : s))
+    return at
+  }
+
   /** Lapor SPT → handed to DJP; the list shows "Diproses DJP". */
   function submit(id: string) {
     list.value = list.value.map(s => (s.id === id ? { ...s, status: 'IN_PROGRESS' as const } : s))
   }
 
-  return { list, sorted, hasOpenSpt, create, remove, get, submit }
+  return { list, sorted, hasOpenSpt, create, remove, get, post, submit }
 }

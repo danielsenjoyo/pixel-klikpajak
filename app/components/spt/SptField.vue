@@ -108,11 +108,14 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
     <option v-for="o in selectOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
   </MpSelect>
 
+  <!-- `null` reaches KpYesNo unchanged so an unanswered declaration renders as neither
+       radio, rather than as a Tidak nobody chose. -->
   <KpYesNo
     v-else-if="type === 'yesno'"
     :id="id"
-    :model-value="modelValue === true"
+    :model-value="modelValue == null ? null : modelValue === true"
     :is-disabled="isDisabled"
+    :is-invalid="isInvalid"
     @update:model-value="emit('update:modelValue', $event)"
   />
 

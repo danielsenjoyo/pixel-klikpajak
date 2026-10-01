@@ -27,15 +27,21 @@ defineProps<{ title: string, breadcrumbs?: { label: string, to?: string }[] }>()
 <style scoped>
 .kp-page-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--mp-spacing-6);
   min-height: 72px;
   padding: var(--mp-spacing-4) var(--mp-spacing-6);
 }
 
+/*
+ * The action buttons cannot shrink below their labels, so without a wrap the title is
+ * squeezed to nothing and breaks one character per line. The 320px basis makes the
+ * actions drop to their own row before that happens.
+ */
 .kp-page-header__left {
   display: flex;
-  flex: 1;
+  flex: 1 1 320px;
   flex-direction: column;
   justify-content: center;
   min-width: 0;
@@ -70,6 +76,8 @@ a.kp-page-header__crumb:hover {
 
 .kp-page-header__actions {
   display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--mp-spacing-2);
 }

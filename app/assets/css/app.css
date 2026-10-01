@@ -61,6 +61,12 @@ body {
 }
 
 /* Visually hidden, still read by screen readers. */
+/* Transient marker on whatever the section menu just jumped to, so the eye lands on it. */
+.kp-flash {
+  border-radius: var(--mp-radii-md);
+  box-shadow: var(--mp-shadows-focus);
+}
+
 .kp-sr-only {
   position: absolute;
   width: 1px;

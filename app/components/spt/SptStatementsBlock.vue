@@ -4,8 +4,16 @@ import type { BlockValues, StatementsBlock } from '~/data/spt1771Engine'
 
 // Declarations (Figma Lampiran 10B/10C/10D, 11B III): numbered groups of statements,
 // each answered Tidak/Ya or ticked; optional dated fields after the list.
-defineProps<{ block: StatementsBlock, idPrefix: string, isReadOnly?: boolean }>()
+const props = defineProps<{ block: StatementsBlock, idPrefix: string, isReadOnly?: boolean }>()
 const values = defineModel<BlockValues>({ required: true })
+
+/**
+ * A `required` yes/no block must be *answered*, which is why these start unset rather than
+ * at Tidak: with a binary control there is no way to tell a deliberate Tidak from a
+ * declaration nobody read.
+ */
+const isUnanswered = (key: string) =>
+  props.block.required === true && props.block.control === 'yesno' && values.value[key] == null
 </script>
 
 <template>
@@ -19,14 +27,15 @@ const values = defineModel<BlockValues>({ required: true })
       <ul class="spt-statements__list">
         <li v-for="s in g.items" :key="s.key" class="spt-statements__item">
           <template v-if="block.control === 'yesno'">
-            <KpQuestion :label="s.letter ? `${s.letter}. ${s.label}` : s.label">
+            <KpQuestion :label="`${s.letter ? `${s.letter}. ` : ''}${s.label}${block.required ? '*' : ''}`">
               <ul v-if="s.subItems" class="spt-statements__sub">
                 <li v-for="sub in s.subItems" :key="sub">{{ sub }}</li>
               </ul>
               <KpYesNo
                 :id="`${idPrefix}-${s.key}`"
-                :model-value="values[s.key] === true"
+                :model-value="(values[s.key] ?? null) as boolean | null"
                 :is-disabled="isReadOnly"
+                :is-invalid="isUnanswered(s.key)"
                 @update:model-value="values[s.key] = $event"
               />
             </KpQuestion>

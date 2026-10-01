@@ -9,14 +9,21 @@ import {
   MpModalHeader,
   MpModalOverlay,
   MpText,
+  MpBanner,
+  MpBannerDescription,
+  MpCheckbox,
   toast,
 } from '@mekari/pixel3'
 import blankSlateImage from '~/assets/images/blankslate-spt.png'
-import { missingLampiran, sectionStates } from '~/data/spt1771Checkpoints'
-import { computeInduk, missingFields } from '~/data/spt1771Induk'
+import { formatRp } from '~/utils/currency'
+import { applyIssues, missingSections, requiredLampiran, sectionStates } from '~/data/spt1771Checkpoints'
+import { isRowFilled, type Row } from '~/data/spt1771Engine'
+import { computeInduk, gatingAnswers, hasilSpt, isIndukTab, type IndukTab } from '~/data/spt1771Induk'
+import { blockingIssues, validateSpt, warningIssues } from '~/data/spt1771Validation'
+import type { Issue } from '~/data/spt1771Engine'
 import { lampiranDef, lampiranLinks } from '~/data/spt1771LampiranDefs'
-import { SEKTOR_USAHA, penghasilanNetoFiskal } from '~/data/spt1771Lampiran1'
-import { LIST_PATH, detailPath, findSection, isLocked, masaLabel } from '~/data/sptTahunanBadan'
+import { labaKomersial, penghasilanNetoFiskal, penyusutanKomersial } from '~/data/spt1771Lampiran1'
+import { LIST_PATH, detailPath, findSection, isLocked, masaLabel, postedAtLabel, sectionHeading, sectionNumber } from '~/data/sptTahunanBadan'
 
 // Lapor SPT Tahunan Badan — Figma "SPT-Tahunan-Badan › --> SPT":
 // page title (breadcrumb, Download petunjuk pengisian, Lapor SPT), in-page section
@@ -29,7 +36,9 @@ definePageMeta({
 
 const route = useRoute()
 const id = String(route.params.id)
-const { get, submit } = useSptTahunanBadan()
+const { get, post, submit } = useSptTahunanBadan()
+// BUT status is a property of the entity, not the return — it opens Lampiran 12A/12B.
+const { company } = useSession()
 const spt = computed(() => get(id))
 
 const sectionKey = computed(() => {
@@ -43,21 +52,95 @@ const section = computed(() => findSection(sectionKey.value)!)
 useHead({ title: () => (spt.value ? `Lapor SPT Tahunan Badan ${masaLabel(spt.value)} · Klikpajak` : 'SPT tidak ditemukan · Klikpajak') })
 
 // ── Form state ───────────────────────────────────────────────────────────────
-const { draft, isDirty, save, discard } = useSpt1771Form(id)
+const { draft, isDirty, save, discard, refreshPrefill } = useSpt1771Form(id)
 const isPembetulan = computed(() => (spt.value?.revision ?? 0) > 0)
 const isReadOnly = computed(() => !!spt.value && isLocked(spt.value))
-const sektorLabel = computed(() => SEKTOR_USAHA.find(s => s.value === draft.value.lampiran1.sektor)?.label ?? '')
 
 const totals = computed(() => computeInduk(draft.value.induk, penghasilanNetoFiskal(draft.value.lampiran1), isPembetulan.value, lampiranLinks(draft.value.lampiran)))
-const indukMissing = computed(() => missingFields(draft.value.induk, totals.value))
-const states = computed(() => sectionStates({
+
+/** What every lampiran renders against — and, so the two agree, what its field rules see. */
+const lampiranCtx = computed(() => ({
+  year: spt.value?.year ?? 0,
+  pkp: totals.value.pkp,
+  pkpAngka9: totals.value.d9,
+  penghasilanNeto: totals.value.d4,
+  pphTerutang: totals.value.d12,
+  labaKomersial: labaKomersial(draft.value.lampiran1),
+  penyusutanKomersial: penyusutanKomersial(draft.value.lampiran1),
+  lampiran: draft.value.lampiran,
+  answers: gatingAnswers(draft.value.induk),
+  entityType: company.value.entityType,
+}))
+
+/**
+ * Three passes, in order: what has data → what is wrong → the menu ticks, with any
+ * section carrying an error downgraded so a green tick never sits next to a blocker.
+ */
+const dataStates = computed(() => sectionStates({
   induk: draft.value.induk,
-  indukMissing: indukMissing.value,
   lampiran1: draft.value.lampiran1,
   lampiran: draft.value.lampiran,
+  isBut: !!company.value.isBut,
 }))
-const missing = computed(() => [...indukMissing.value, ...missingLampiran(states.value)])
-const isComplete = computed(() => missing.value.length === 0)
+const issues = computed(() => validateSpt({
+  induk: draft.value.induk,
+  totals: totals.value,
+  lampiran1: draft.value.lampiran1,
+  lampiran: draft.value.lampiran,
+  isBut: !!company.value.isBut,
+  entityType: company.value.entityType,
+  missingSections: missingSections(dataStates.value),
+  ctx: lampiranCtx.value,
+}))
+const errors = computed(() => blockingIssues(issues.value))
+const states = computed(() => applyIssues(dataStates.value, issues.value))
+const isComplete = computed(() => errors.value.length === 0)
+
+// Brief §5: the result of angka 17c is the headline of the whole return. It stays an
+// estimate until nothing is missing, and rides along in the section menu (§4.2).
+const hasil = computed(() => hasilSpt(totals.value, isComplete.value, isPembetulan.value))
+const activeLampiran = computed(() => [...requiredLampiran({
+  induk: draft.value.induk,
+  lampiran: draft.value.lampiran,
+  isBut: !!company.value.isBut,
+})])
+
+// Which Induk tab is open, and which lampiran part. Held by the page (not the forms) so
+// an issue can be jumped to from anywhere, and so both survive section switches — the
+// page instance is keyed on the SPT id, not the section.
+const indukTab = ref<IndukTab>(isIndukTab(route.query.tab) ? route.query.tab : 'ringkasan')
+const lampiranPart = ref('')
+watch(sectionKey, () => { lampiranPart.value = '' })
+
+let flashTimer: ReturnType<typeof setTimeout> | undefined
+let flashed: Element | null = null
+
+/**
+ * Take the preparer to whatever an issue points at: open its tab or part, route to its
+ * section, then scroll the control into view, focus it and flash it.
+ */
+async function goToIssue(issue: Pick<Issue, 'section' | 'tab' | 'target'>) {
+  if (issue.tab) {
+    if (issue.section === 'induk') { if (isIndukTab(issue.tab)) indukTab.value = issue.tab }
+    else lampiranPart.value = issue.tab
+  }
+  if (sectionKey.value !== issue.section) await navigateTo(detailPath({ id }, issue.section))
+  await nextTick()
+  if (!issue.target) return
+  const el = document.getElementById(issue.target)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  ;(el.matches('input, select, textarea') ? el : el.querySelector('input, select, textarea'))
+    ?.dispatchEvent(new Event('focus'))
+  flashed?.classList.remove('kp-flash')
+  el.classList.add('kp-flash')
+  flashed = el
+  clearTimeout(flashTimer)
+  flashTimer = setTimeout(() => { el.classList.remove('kp-flash'); flashed = null }, 2000)
+}
+
+const jumpToHasil = () => goToIssue({ section: 'induk', tab: 'perhitungan', target: 'induk-hasil' })
+onBeforeUnmount(() => clearTimeout(flashTimer))
 
 const status = computed(() => {
   if (isReadOnly.value) return { label: 'Sudah dilaporkan', type: 'information' as const }
@@ -65,14 +148,69 @@ const status = computed(() => {
 })
 
 const lampiranPage = computed(() => (spt.value ? lampiranDef(sectionKey.value, spt.value.year) : undefined))
-const lampiranCtx = computed(() => ({
-  year: spt.value?.year ?? 0,
-  pkp: totals.value.pkp,
-  pkpAngka9: totals.value.d9,
-  penghasilanNeto: totals.value.d4,
-  lampiran: draft.value.lampiran,
-}))
 
+// ── Lampiran 2 (PRD F4) ──────────────────────────────────────────────────────
+const l2 = computed(() => draft.value.lampiran['lampiran-2'] ?? {})
+const l2Rows = (key: string) => (Array.isArray(l2.value[key]) ? (l2.value[key] as Row[]).filter(isRowFilled) : [])
+
+/** "Tarik ulang data" on a DJP-owned roster — which one depends on the section in view. */
+function onRefreshPrefill() {
+  const n = refreshPrefill(sectionKey.value)
+  const what = sectionKey.value === 'lampiran-5' ? 'tempat kegiatan usaha' : 'pemilik'
+  toast.notify({
+    id: `toast-${sectionKey.value}-prefill`,
+    variant: n ? 'success' : 'info',
+    title: n ? `${n} data ${what} diperbarui dari DJP` : `Tidak ada data ${what} dari DJP`,
+  })
+}
+
+/**
+ * §2 retain-and-hide: turning H.21.c/d to "Tidak" while Lampiran 2B holds data hides
+ * the tab but keeps the rows, so re-answering "Ya" brings them back. Nothing is deleted.
+ */
+const hideL2bPrompt = ref<{ key: 'c' | 'd' } | null>(null)
+watch(() => [draft.value.induk.h21?.c, draft.value.induk.h21?.d] as const, ([c, d], [prevC, prevD]) => {
+  if (!l2Rows('penyertaan').length) return
+  const turnedOff = (prevC && !c) ? 'c' : (prevD && !d) ? 'd' : null
+  // Only prompt once the last activating answer is switched off.
+  if (turnedOff && !c && !d) hideL2bPrompt.value = { key: turnedOff }
+})
+
+function keepL2bHidden() {
+  hideL2bPrompt.value = null
+  toast.notify({ id: 'toast-l2b-hidden', variant: 'information', title: 'Data Lampiran 2B disembunyikan dan tetap tersimpan' })
+}
+
+function restoreL2bAnswer() {
+  const key = hideL2bPrompt.value?.key
+  if (key) draft.value.induk.h21 = { ...draft.value.induk.h21, [key]: true }
+  hideL2bPrompt.value = null
+}
+
+/**
+ * What to say at the top of the section the preparer is on, rendered from the issue list
+ * rather than restated here — a second copy of a rule drifts the first time Tax revises it.
+ *
+ * Warnings have no other home: they never reach the Lapor gate, so without this banner they
+ * would be computed and never seen. Document-level blockers (a missing lampiran, a field
+ * already marked red in the grid) are left out; this is for what the section cannot show.
+ */
+const sectionNotices = computed(() => {
+  const here = issues.value.filter(i => i.section === sectionKey.value)
+  return [
+    ...warningIssues(here),
+    ...blockingIssues(here).filter(i => !i.target && !i.code.startsWith('lampiran/')),
+  ]
+})
+// Lampiran number + DJP's official title; sub-parts without a title in the index fall
+// back to the heading their own form definition carries.
+const sectionTitle = computed(() => {
+  const s = section.value
+  if (s.officialTitle) return sectionHeading(s)
+  const fallback = lampiranPage.value?.parts.find(p => p.title)?.title ?? lampiranPage.value?.title
+  const no = sectionNumber(s.key)
+  return fallback && no ? `${no} — ${fallback}` : (fallback ?? no ?? s.label)
+})
 const isNavCollapsed = ref(false)
 const hrefFor = (key: string) => detailPath({ id }, key)
 
@@ -81,14 +219,32 @@ function onSave() {
   toast.notify({ id: 'toast-spt-saved', variant: 'success', title: 'SPT berhasil disimpan' })
 }
 
+/** Posting SPT: commit the draft and re-stamp "Waktu posting terakhir". Nothing goes to DJP. */
+function onPosting() {
+  save()
+  post(id)
+  toast.notify({ id: 'toast-spt-posting', variant: 'success', title: 'SPT berhasil diposting' })
+}
+
 function downloadGuide() {
   toast.notify({ id: 'toast-spt-guide', variant: 'success', title: 'Petunjuk pengisian berhasil diunduh' })
 }
 
 // ── Lapor SPT ────────────────────────────────────────────────────────────────
 const isConfirmOpen = ref(false)
+/** The declaration is made here, at submission — not as a field on the form. */
+const isDeclared = ref(false)
+const todayLabel = computed(() => {
+  const d = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`
+})
+watch(isConfirmOpen, open => { if (open) isDeclared.value = false })
 
 function confirmLapor() {
+  if (errors.value.length || !isDeclared.value) { isConfirmOpen.value = false; return }
+  // DateOfSubmit is stamped at filing, which is why the form has no date field.
+  draft.value.induk.tanggal = todayLabel.value
   save()
   submit(id)
   isConfirmOpen.value = false
@@ -133,6 +289,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
       >
         <template #actions>
           <MpButton id="spt-guide" variant="secondary" left-icon="help" @click="downloadGuide">Download petunjuk pengisian</MpButton>
+          <MpButton id="spt-posting" variant="secondary" :is-disabled="isReadOnly" @click="onPosting">Posting SPT</MpButton>
           <!-- v-tooltip needs an object, so the explaining wrapper only renders while incomplete. -->
           <span
             v-if="!isComplete && !isReadOnly"
@@ -152,8 +309,11 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
             :active-key="sectionKey"
             :href-for="hrefFor"
             :status="status"
-            :missing="isReadOnly ? [] : missing"
+            :posted-at="spt ? postedAtLabel(spt) : null"
             :states="states"
+            :hasil="hasil"
+            :required="activeLampiran"
+            @jump-hasil="jumpToHasil"
           />
 
           <div class="spt-lapor__content">
@@ -161,25 +321,65 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
               SPT ini sudah dilaporkan ke DJP ({{ spt.status === 'SUBMITTED' ? 'berhasil' : 'sedang diproses' }}), sehingga tidak dapat diubah.
             </p>
 
+            <MpModal id="l2b-hide-modal" :is-open="!!hideL2bPrompt" size="sm" @close="restoreL2bAnswer">
+              <MpModalContent>
+                <MpModalHeader>
+                  Sembunyikan Lampiran 2B?
+                  <MpModalCloseButton />
+                </MpModalHeader>
+                <MpModalBody>
+                  <MpText>Data Lampiran 2B akan disembunyikan tapi tetap tersimpan. Lanjutkan?</MpText>
+                </MpModalBody>
+                <MpModalFooter>
+                  <div class="spt-lapor__modal-actions">
+                    <MpButton id="l2b-hide-cancel" variant="ghost" @click="restoreL2bAnswer">Batalkan</MpButton>
+                    <MpButton id="l2b-hide-confirm" @click="keepL2bHidden">Lanjutkan</MpButton>
+                  </div>
+                </MpModalFooter>
+              </MpModalContent>
+              <MpModalOverlay />
+            </MpModal>
+
+            <MpBanner
+              v-for="notice in sectionNotices"
+              :id="`spt-notice-${notice.code.replace(/[^a-z0-9]+/gi, '-')}`"
+              :key="notice.code"
+              :variant="notice.severity === 'error' ? 'critical' : 'warning'"
+              is-inline
+              class="spt-lapor__reminder"
+            >
+              <MpBannerDescription>{{ notice.message }}</MpBannerDescription>
+            </MpBanner>
+
             <fieldset class="spt-lapor__fieldset" :disabled="isReadOnly">
               <SptIndukForm
                 v-if="sectionKey === 'induk'"
                 v-model="draft.induk"
+                v-model:tab="indukTab"
                 :totals="totals"
+                :hasil="hasil"
                 :year="spt.year"
+                v-model:sektor="draft.lampiran1.sektor"
+                :title="sectionTitle"
                 :is-pembetulan="isPembetulan"
-                :sektor-label="sektorLabel"
+                :bank-accounts="company.bankAccounts"
+                :href-for="hrefFor"
+                :is-but="!!company.isBut"
+                :lampiran="draft.lampiran"
               />
               <SptLampiran1 v-else-if="sectionKey === 'lampiran-1'" v-model="draft.lampiran1" :is-read-only="isReadOnly" />
               <SptLampiranPage
                 v-else-if="lampiranPage"
                 :key="sectionKey"
                 v-model="draft.lampiran[sectionKey]"
+                v-model:part="lampiranPart"
                 :def="lampiranPage"
+                :title="sectionTitle"
                 :ctx="lampiranCtx"
                 :is-read-only="isReadOnly"
+                @refresh-prefill="onRefreshPrefill"
               />
-              <SptLampiranPlaceholder v-else :title="section.label" />
+              <SptLampiranPlaceholder v-else :title="sectionTitle" />
             </fieldset>
 
             <div v-if="!isReadOnly" class="spt-lapor__actions">
@@ -198,12 +398,37 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
             <MpModalCloseButton />
           </MpModalHeader>
           <MpModalBody>
-            <MpText>SPT Tahunan Badan {{ masaLabel(spt) }} akan dikirim ke DJP. Setelah dilaporkan, SPT tidak dapat diubah.</MpText>
+            <div class="spt-lapor__confirm">
+              <MpText>SPT Tahunan Badan {{ masaLabel(spt) }} akan dikirim ke DJP. Setelah dilaporkan, SPT tidak dapat diubah.</MpText>
+
+              <dl class="spt-lapor__summary">
+                <dt><MpText size="label-small" color="text.secondary">Hasil SPT (angka {{ hasil.line }})</MpText></dt>
+                <dd><MpText size="label" weight="semiBold">{{ hasil.state === 'nihil' ? hasil.label : `${hasil.label} ${formatRp(hasil.amount)}` }}</MpText></dd>
+                <dt><MpText size="label-small" color="text.secondary">Penandatangan</MpText></dt>
+                <dd><MpText size="label">{{ draft.induk.namaPenandatangan }} — {{ draft.induk.jabatan }}</MpText></dd>
+                <dt><MpText size="label-small" color="text.secondary">Tanggal pelaporan</MpText></dt>
+                <dd><MpText size="label">{{ todayLabel }}</MpText></dd>
+              </dl>
+
+              <MpBanner v-if="hasil.state === 'kb'" id="spt-lapor-kb" variant="warning" is-inline>
+                <MpBannerDescription>Pastikan deposit pajak di Coretax mencukupi sebelum mengirim.</MpBannerDescription>
+              </MpBanner>
+
+              <p class="spt-lapor__statement">
+                Dengan menyadari sepenuhnya akan segala akibatnya termasuk sanksi-sanksi sesuai dengan ketentuan
+                perundang-undangan yang berlaku, saya menyatakan bahwa apa yang telah saya beritahukan di atas
+                beserta lampiran-lampirannya adalah benar, lengkap dan jelas.
+              </p>
+
+              <MpCheckbox id="spt-lapor-agree" :is-checked="isDeclared" @change="isDeclared = $event">
+                Saya menyatakan data di atas benar, lengkap dan jelas
+              </MpCheckbox>
+            </div>
           </MpModalBody>
           <MpModalFooter>
             <div class="spt-lapor__modal-actions">
               <MpButton id="spt-lapor-cancel" variant="ghost" @click="isConfirmOpen = false">Batalkan</MpButton>
-              <MpButton id="spt-lapor-confirm" @click="confirmLapor">Lapor SPT</MpButton>
+              <MpButton id="spt-lapor-confirm" :is-disabled="!isDeclared" @click="confirmLapor">Kirim SPT</MpButton>
             </div>
           </MpModalFooter>
         </MpModalContent>
@@ -303,6 +528,36 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
   padding: var(--mp-spacing-3) 0 var(--mp-spacing-5);
   border-top: 1px solid var(--mp-colors-border-default);
   background: var(--mp-colors-background-stage);
+}
+
+.spt-lapor__reminder {
+  margin-bottom: var(--mp-spacing-4);
+}
+
+.spt-lapor__confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mp-spacing-4);
+}
+
+.spt-lapor__summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--mp-spacing-2) var(--mp-spacing-5);
+  margin: 0;
+}
+.spt-lapor__summary dd {
+  margin: 0;
+}
+
+.spt-lapor__statement {
+  margin: 0;
+  padding: var(--mp-spacing-3);
+  border-radius: var(--mp-radii-sm);
+  background: var(--mp-colors-background-neutral-subtle);
+  color: var(--mp-colors-text-default);
+  font-size: var(--mp-font-sizes-sm);
+  line-height: var(--mp-line-heights-lg);
 }
 
 .spt-lapor__modal-actions {

@@ -34,6 +34,7 @@ import {
 import blankSlateImage from '~/assets/images/blankslate-spt.png'
 import {
   LAPOR_STATUS,
+  MIN_TAX_YEAR,
   canDelete,
   canDownloadBpe,
   detailPath,
@@ -81,9 +82,10 @@ const isCreateOpen = ref(false)
 const createYear = ref<string | null>(null)
 const createError = ref('')
 
-// Annual SPT can only be reported for a tax year that has ended.
+// Annual SPT can only be reported for a tax year that has ended, and Coretax
+// starts at MIN_TAX_YEAR.
 const lastReportableYear = new Date().getFullYear() - 1
-const disableYear = (year: number) => year > lastReportableYear
+const disableYear = (year: number) => year > lastReportableYear || year < MIN_TAX_YEAR
 
 function openCreate() {
   createYear.value = null
@@ -101,6 +103,10 @@ function submitCreate() {
     return
   }
   const year = Number(createYear.value)
+  if (year < MIN_TAX_YEAR) {
+    createError.value = `SPT hanya dapat dibuat untuk Tahun Pajak ${MIN_TAX_YEAR} dan seterusnya.`
+    return
+  }
   if (hasOpenSpt(year)) {
     createError.value = `SPT Tahunan Badan ${masaLabel({ year })} masih dalam proses. Selesaikan SPT tersebut terlebih dulu.`
     return
