@@ -106,7 +106,9 @@ const hasActions = computed(() => !locked.value && (canDelete.value || props.blo
  * SPT still refuses, since nothing about it may change.
  */
 const canRefresh = computed(() => props.block.refreshable === true && !props.isReadOnly)
-const hasHeadActions = computed(() => props.block.mode === 'drawer' && (canRefresh.value || !locked.value))
+/** Offer the CSV template + import (US-5). */
+const importable = computed(() => props.block.importable === true && !locked.value)
+const hasHeadActions = computed(() => canRefresh.value || (!locked.value && (importable.value || (props.block.mode === 'drawer' && canAdd.value))))
 const leadCols = computed(() => (numbered.value ? 1 : 0))
 
 const cellWidth = (c: FieldDef) => `${c.width ?? (c.type === 'currency' || c.type === 'usd' ? 184 : 160)}px`
@@ -120,7 +122,12 @@ function columnTotal(c: FieldDef) {
 }
 
 function emptyRow(): Row {
-  return { id: newRowId() }
+  const row: Row = { id: newRowId() }
+  // Grouped grids only render a row under a matching heading, so a row added with no
+  // group would simply not appear. It starts in the first group and can be moved.
+  const g = props.block.groupBy
+  if (g) row[g.key] = g.options[0]?.value
+  return row
 }
 
 // ── Inline mode ──────────────────────────────────────────────────────────────
@@ -263,13 +270,21 @@ const bodyItems = computed<BodyItem[]>(() => {
   const g = props.block.groupBy
   if (g) {
     let index = 0
+    let lastHeading: string | undefined
     for (const opt of g.options) {
-      if (opt.heading) out.push({ kind: 'heading', label: opt.heading })
-      out.push({ kind: 'group', label: opt.label })
-      for (const row of rows.value) {
-        if (String(row[g.key] ?? '') === opt.value) out.push({ kind: 'data', row, index: index++ })
+      const inGroup = rows.value.filter(row => String(row[g.key] ?? '') === opt.value)
+      const groupRecap = recapRows.filter(r => r.after === opt.value)
+      // An empty group is not shown. Lampiran 9 has ten of them, and printing every one
+      // above an empty register buried the grid under headings that said nothing — the
+      // group a row belongs to is already its own column.
+      if (!inGroup.length && !groupRecap.length) continue
+      if (opt.heading && opt.heading !== lastHeading) {
+        out.push({ kind: 'heading', label: opt.heading })
+        lastHeading = opt.heading
       }
-      for (const r of recapRows.filter(r => r.after === opt.value)) out.push({ kind: 'recap', row: r })
+      out.push({ kind: 'group', label: opt.label })
+      for (const row of inGroup) out.push({ kind: 'data', row, index: index++ })
+      for (const r of groupRecap) out.push({ kind: 'recap', row: r })
     }
     for (const r of recapRows.filter(r => !r.after)) out.push({ kind: 'recap', row: r })
     return out
@@ -328,7 +343,6 @@ const stickyClass = (index: number) => ({
 
 // ── Import (US-5): CSV template out, validated rows in ───────────────────────
 const importResult = ref<{ imported: number, rejected: { row: number, reason: string }[] } | null>(null)
-const importable = computed(() => props.block.importable === true && !locked.value)
 const importColumns = computed(() => columns.value.filter(c => !c.compute && !c.derive))
 /** Grouped columns repeat labels ("Nilai" x3), so the template qualifies them. */
 const plain = (c: FieldDef) => {
@@ -463,7 +477,7 @@ function confirmDelete() {
           />
         </template>
         <MpButton
-          v-if="canAdd"
+          v-if="canAdd && block.mode === 'drawer'"
           :id="`${idPrefix}-add`"
           variant="secondary"
           left-icon="add"
@@ -534,7 +548,7 @@ function confirmDelete() {
             <MpTableRow v-else-if="item.kind === 'group'" class="spt-table-block__grouprow">
               <MpTableCell as="td" :colspan="fullSpan">{{ item.label }}</MpTableCell>
             </MpTableRow>
-            <MpTableRow v-else-if="item.kind === 'data'">
+            <MpTableRow v-else-if="item.kind === 'data'" class="spt-table-block__data">
               <MpTableCell v-if="numbered" as="td" :class="{ 'spt-table-block__sticky': stickyStart > 0 }" :style="{ '--sticky-left': stickyStart > 0 ? '0px' : undefined }">{{ item.index + 1 }}</MpTableCell>
 
               <MpTableCell
@@ -891,6 +905,13 @@ thead .spt-table-block__sticky {
 .spt-table-block__delete {
   width: 32px;
   height: 32px;
+}
+
+/* A cell carrying a validation message is taller than its neighbours, and a middle-aligned
+   row then staggers every control in it. Top-aligning keeps the inputs on one line and lets
+   the message hang below its own cell — it also evens out controls of differing heights. */
+.spt-table-block__data > * {
+  vertical-align: top;
 }
 
 .spt-table-block__num {

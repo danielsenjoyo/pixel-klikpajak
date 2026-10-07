@@ -100,6 +100,21 @@ export const requiredWhen = (cond: (row: Record<string, unknown>, ctx: Ctx) => b
 export const atMost = (max: number, message: string): Validator =>
   value => (typeof value === 'number' && value > max ? message : undefined)
 
+/**
+ * V-I4: no two rows of `blockKey` may carry the same value in `fieldKey`. Written as a
+ * field rule rather than a save-time check, so it holds in an inline grid — which has no
+ * save step to hang a check on.
+ */
+export const uniqueIn = (blockKey: string, fieldKey: string, message: string): Validator =>
+  (value, row, ctx) => {
+    const v = String(value ?? '').trim()
+    if (!v) return undefined
+    const mine = String(row.id ?? '')
+    const clash = tableRows(ctx.section, blockKey)
+      .some(r => r.id !== mine && String(r[fieldKey] ?? '').trim() === v)
+    return clash ? message : undefined
+  }
+
 /** This date may not fall before the one in `otherKey`; silent until both are complete. */
 export const notBefore = (otherKey: string, message: string): Validator =>
   (value, row) => {

@@ -6,6 +6,7 @@ import {
   atMost,
   blockValues,
   notBefore,
+  uniqueIn,
   pkpKenaTarif,
   num,
   sumColumn,
@@ -127,14 +128,15 @@ const lampiran2: LampiranDef = {
       blocks: [{
         kind: 'table',
         key: 'penyertaan',
-        mode: 'drawer',
+        mode: 'inline',
         emptyLabel: 'lampiran 2B',
         dedupeKey: 'npwp',
         importable: true,
         columns: [
           text('nama', 'Nama (2)', { required: true, width: 200 }),
           negara('kodeNegara', 'Kode Negara (3)', { required: true }),
-          { key: 'npwp', label: 'NPWP/TIN (4)', type: 'id', width: 180, required: true },
+          // V-I4 as a field rule, so it still holds now the grid is edited inline.
+          { key: 'npwp', label: 'NPWP/TIN (4)', type: 'id', width: 180, required: true, validate: uniqueIn('penyertaan', 'npwp', 'NPWP/TIN ini sudah terdaftar. Satu pihak hanya boleh dimasukkan satu kali.') },
           rp('modal', 'Nilai (5)', { group: 'Penyertaan modal' }),
           { key: 'persen', label: '% (6)', type: 'percent', group: 'Penyertaan modal', width: 100 },
           rp('utang', 'Nilai (7)', { group: 'Utang' }),
@@ -167,7 +169,7 @@ const lampiran3: LampiranDef = {
       blocks: [{
         kind: 'table',
         key: 'luarNegeri',
-        mode: 'drawer',
+        mode: 'inline',
         emptyLabel: 'lampiran 3A',
         columns: [
           text('nama', 'Nama (2)', { group: 'Pemotong pajak', required: true, width: 200 }),
@@ -190,7 +192,7 @@ const lampiran3: LampiranDef = {
       blocks: [{
         kind: 'table',
         key: 'dipotong',
-        mode: 'drawer',
+        mode: 'inline',
         emptyLabel: 'lampiran 3B',
         columns: [
           text('nama', 'Nama (2)', { group: 'Pemotong/pemungut pajak', required: true, width: 200 }),
@@ -376,7 +378,7 @@ const lampiran7 = (year: number): LampiranDef => ({
     blocks: [{
       kind: 'table',
       key: 'kompensasi',
-      mode: 'drawer',
+      mode: 'inline',
       emptyLabel: 'lampiran 7',
       columns: [
         { key: 'tahun', label: 'Tahun (2)', type: 'year', group: 'Laba (Rugi) netto fiskal', required: true, width: 110 },
@@ -459,13 +461,13 @@ function l9GroupOptions(groups: typeof L9_BERWUJUD_GROUPS) {
   })
 }
 
-const L9_ALL_GROUPS = [...L9_BERWUJUD_GROUPS, ...L9_TAK_BERWUJUD_GROUPS]
 /**
- * Both tables read one asset list, so a single "Tambah data" can file a row into
- * either. Codes are disjoint across the registers (4xx berwujud, 5xx bangunan,
- * 6xx tak berwujud), so one Kode aset list serves them all.
+ * The two registers share one asset store but are edited as separate grids, so each one
+ * offers only its own kelompok and its own kode aset. Letting the berwujud grid pick a
+ * tak-berwujud kelompok made the row vanish into the other table — the add button said
+ * one thing and the dropdown did another.
  */
-const ASET_SEMUA = [...ASET_BERWUJUD, ...KELOMPOK_BANGUNAN, ...ASET_TAK_BERWUJUD]
+const ASET_BERWUJUD_SEMUA = [...ASET_BERWUJUD, ...KELOMPOK_BANGUNAN]
 
 /** Fiscal depreciation of the rows in the given categories. */
 const totalPenyusutan = (ctx: Ctx, groups: string[]) =>
@@ -487,7 +489,9 @@ export function selisihPenyusutanL9(ctx: Ctx): number {
 
 /** The nine DJP columns, shared by both registers. */
 const asetColumns = (groups: typeof L9_BERWUJUD_GROUPS, aset: Parameters<typeof toOptions>[0]): FieldDef[] => [
-  { key: 'kelompok', label: 'Kelompok aset', type: 'select', options: l9GroupOptions(groups), required: true, formOnly: true, placeholder: 'Pilih kelompok aset' },
+  // Visible, not form-only: inline editing has no drawer to ask for the group in, and it is
+  // what files a row into the berwujud or tak-berwujud grid.
+  { key: 'kelompok', label: 'Kelompok aset', type: 'select', options: l9GroupOptions(groups), required: true, width: 200, placeholder: 'Pilih kelompok aset' },
   code('kode', 'Kode aset (1)', aset, true, { required: true, placeholder: 'Pilih kode aset' }),
   text('jenis', 'Kelompok/jenis aset (2)', { width: 200, derive: r => codeName(aset, r.kode) }),
   { key: 'perolehan', label: 'Bulan/tahun perolehan (3)', type: 'month', width: 160 },
@@ -510,13 +514,11 @@ const lampiran9: LampiranDef = {
         key: 'berwujud',
         dataKey: 'aset',
         title: 'Harta berwujud dan bangunan',
-        mode: 'drawer',
+        mode: 'inline',
         emptyLabel: 'harta',
         numbered: false,
         groupBy: { key: 'kelompok', options: L9_BERWUJUD_GROUPS },
-        // The one add button lives here and offers every category; a tak-berwujud
-        // row files itself into the table below.
-        columns: asetColumns(L9_ALL_GROUPS, ASET_SEMUA),
+        columns: asetColumns(L9_BERWUJUD_GROUPS, ASET_BERWUJUD_SEMUA),
         recap: {
           key: 'rekapBerwujud',
           totalKey: 'penyusutan',
@@ -533,12 +535,11 @@ const lampiran9: LampiranDef = {
         key: 'takBerwujud',
         dataKey: 'aset',
         title: 'Harta tak berwujud',
-        mode: 'drawer',
+        mode: 'inline',
         emptyLabel: 'harta',
         numbered: false,
-        canAdd: false,
         groupBy: { key: 'kelompok', options: L9_TAK_BERWUJUD_GROUPS },
-        columns: asetColumns(L9_ALL_GROUPS, ASET_SEMUA),
+        columns: asetColumns(L9_TAK_BERWUJUD_GROUPS, ASET_TAK_BERWUJUD),
         recap: {
           key: 'rekapTakBerwujud',
           totalKey: 'penyusutan',
@@ -564,7 +565,7 @@ const lampiran10a: LampiranDef = {
     blocks: [{
       kind: 'table',
       key: 'transaksi',
-      mode: 'drawer',
+      mode: 'inline',
       emptyLabel: 'lampiran 10A',
       columns: [
         text('nama', 'Nama (2)', { width: 200, required: true }),
@@ -1154,7 +1155,7 @@ const lampiran12b: LampiranDef = {
       key: 'perusahaanBaru',
       when: bentukDipilih('perusahaanBaru'),
       title: 'V. Penanaman kembali dalam bentuk penyertaan modal pada perusahaan yang baru didirikan',
-      mode: 'drawer',
+      mode: 'inline',
       columns: [
         text('nama', 'Nama perusahaan (2)', { width: 220, required: true }),
         { key: 'npwp', label: 'NPWP (3)', type: 'id', width: 180 },
@@ -1172,7 +1173,7 @@ const lampiran12b: LampiranDef = {
       key: 'perusahaanLama',
       when: bentukDipilih('perusahaanLama'),
       title: 'VI. Penanaman kembali dalam bentuk penyertaan modal pada perusahaan yang sudah didirikan',
-      mode: 'drawer',
+      mode: 'inline',
       columns: [
         text('nama', 'Nama perusahaan (2)', { width: 220, required: true }),
         { key: 'npwp', label: 'NPWP (3)', type: 'id', width: 180 },
@@ -1192,7 +1193,7 @@ const lampiran12b: LampiranDef = {
       key: 'asetTetap',
       when: bentukDipilih('asetTetap'),
       title: 'VII. Penanaman kembali dalam bentuk aset tetap',
-      mode: 'drawer',
+      mode: 'inline',
       columns: [
         text('jenis', 'Jenis aset tetap (2)', { width: 220, required: true }),
         text('lokasi', 'Lokasi aset tetap (3)', { width: 240 }),
