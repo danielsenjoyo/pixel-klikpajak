@@ -52,7 +52,7 @@ app/
   components/spt/*          SPT Tahunan Badan: SptSectionNav (checkpoints), SptIndukForm, SptLampiran1,
                             SptAccountTable; lampiran engine: SptLampiranPage → SptTableBlock /
                             SptFormBlock / SptStatementsBlock / SptFieldsBlock, SptField
-  data/spt1771Induk.ts      SPT Induk model, options, computeInduk(), missingFields()
+  data/spt1771Induk.ts      SPT Induk model, options, computeInduk(), LAMPIRAN_LAINNYA
   data/spt1771Lampiran1.ts  Lampiran 1A rows + formulas (Laba Rugi, Posisi Keuangan)
   data/spt1771Engine.ts     config types for lampiran (table/form/statements/fields blocks) + helpers
   data/spt1771LampiranDefs.ts  Lampiran 2–14 definitions (from Figma), lampiranDef(), emptyLampiran()
@@ -69,7 +69,7 @@ Index pages follow: `KpPageHeader` (title + breadcrumb) → `KpStage` → filter
 `app/pages/main/efiling/report-v2/spt-tahunan-badan/index.vue` (Figma SPT-Tahunan-Badan › Index).
 
 Form pages follow the Lapor SPT page `…/spt-tahunan-badan/[id]/[[section]].vue` (Figma › SPT):
-in-page section menu + 640px form column + sticky Simpan, draft/save via a composable
+in-page section menu + form column (640px stacked, 880px where label/control sit side by side) + sticky Simpan, draft/save via a composable
 (`useSpt1771Form`), unsaved-changes guard, `definePageMeta({ key, sidebarPanel: 'collapsed' })`.
 The layout adds no content padding — pages own it.
 

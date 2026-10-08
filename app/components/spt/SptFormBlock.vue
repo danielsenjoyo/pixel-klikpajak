@@ -21,7 +21,7 @@ const linkedValue = (item: FormItem) => item.linked?.(props.ctx) ?? null
         <MpTableHead>
           <MpTableRow>
             <MpTableCell scope="col" class="spt-form-block__no">{{ headers[0] }}</MpTableCell>
-            <MpTableCell scope="col">{{ headers[1] }}</MpTableCell>
+            <MpTableCell scope="col" class="spt-form-block__head">{{ headers[1] }}</MpTableCell>
             <MpTableCell scope="col" class="spt-form-block__value">{{ headers[2] }}</MpTableCell>
           </MpTableRow>
         </MpTableHead>
@@ -100,9 +100,23 @@ const linkedValue = (item: FormItem) => item.linked?.(props.ctx) ?? null
   vertical-align: top;
 }
 
+/* Pixel's table cells are `nowrap` — right for a data grid, wrong for a calculation sheet
+   whose middle column is a full sentence. Both the column heading (Lampiran 8's runs to a
+   full line of DJP prose) and the Rincian cells stretched the table past its own 960px
+   column and put the block into a sideways scroll. Only these two wrap; the No. and Nilai
+   columns stay on one line so figures never break. */
+/* `vertical-align: top` to match No. and Nilai: the other two columns set it so their
+   body cells sit beside a two-line label, and this one was left at the default `middle`,
+   which pushed the middle heading ~10px below the other two. */
+.spt-form-block__head {
+  white-space: normal;
+  vertical-align: top;
+}
+
 .spt-form-block__label {
   display: flex;
   gap: var(--mp-spacing-2);
+  white-space: normal;
 }
 .spt-form-block__label--indent-1 {
   padding-left: var(--mp-spacing-2);

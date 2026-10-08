@@ -27,13 +27,14 @@ Done so far: **boilerplate only** — shell, nav, layouts, placeholders.
   per-section checkpoints (done / required by SPT Induk answers / optional); required-but-empty
   lampiran block Lapor SPT. Lampiran 8 feeds Induk D.12 when tarif (c) is chosen.
 
-## Open on SPT Tahunan Badan
-
-- Other Lampiran 1 sectors (only "Umum" / 1A is designed).
 - Lampiran → Induk links: every Induk amount with a lampiran source is filled from it once the
   lampiran has data (C.2, C.3, D.5, D.6, D.8, D.10, D.12, E.13, E.16 — see `LINK_SOURCE` in
   `spt1771Induk.ts`), plus Lampiran 7 kolom 9 → Lampiran 6 angka 2. Lampiran 13B IV angka 3
   is 1 - 2 (Figma says "1 + 2"; changed on review since angka 2 is already used).
+
+## Open on SPT Tahunan Badan
+
+- Other Lampiran 1 sectors (only "Umum" / 1A is designed).
 - Lampiran 5B drawer in Figma is a copy of Lampiran 7's; built from the 5B table instead.
 - Code fields are selects backed by mock lists in `app/data/taxCodes.ts` (the source loads them
   from the backend). Country / currency use real ISO codes (subset); Lampiran 4 objek pajak and

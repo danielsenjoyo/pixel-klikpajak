@@ -83,8 +83,10 @@ shared `:disabled` state. The sidebar's 10px row inset from production is `--kp-
   the layout adds no content padding — the page owns it.
 - Index pages: filter row → `MpTable` → `KpPagination`, `KpBlankSlate` for empty
   and filtered-empty (reference: SPT Tahunan Badan index).
-- Form pages: in-page section menu + 640px form column + sticky Simpan, draft
-  via a composable, unsaved-changes guard, `definePageMeta({ key, sidebarPanel })`.
+- Form pages: in-page section menu + form column + sticky Simpan, draft via a
+  composable, unsaved-changes guard, `definePageMeta({ key, sidebarPanel })`.
+  The column is 640px when label and control stack; `KpFormSection` widens to
+  880px so a `KpQuestion inline` row can put the control in a right-hand column.
 - SPT lampiran are config (`spt1771LampiranDefs.ts`); Induk links go through
   `lampiranLinks()` → `computeInduk()`; required rules live in `requiredLampiran()`.
 - Pages mirror source URLs so nav links resolve.
