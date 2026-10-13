@@ -86,6 +86,15 @@ export const companies: Company[] = [
     signer: { nikNpwp: '3173042108750003', nama: 'Bambang Sutrisno', jabatan: 'Ketua Pembina' },
     bankAccounts: [{ id: 'bsi-yayasan', bank: 'Bank Syariah Indonesia (BSI)', nomor: '7001122334', pemilik: 'Yayasan Mekari Peduli' }],
   },
+  {
+    id: 188316,
+    name: 'PT Garuda Logistik Nusantara',
+    npwp: '0678901234567890',
+    email: 'pajak@garudalogistik.co.id',
+    phone: '02145678901',
+    signer: { nikNpwp: '3174081506850006', nama: 'Dewi Anggraini', jabatan: 'Direktur Keuangan' },
+    bankAccounts: [{ id: 'bca-garuda', bank: 'Bank Central Asia (BCA)', nomor: '5410977722', pemilik: 'PT Garuda Logistik Nusantara' }],
+  },
 ]
 
 /**
@@ -147,6 +156,17 @@ export function tkuPrefill(companyId: number): TkuRow[] {
     ...place,
   }))
 }
+
+/**
+ * Whether the viewer may see what the company pays. The history table lists contract
+ * values, and a custom role created to manage quota operationally is not necessarily
+ * meant to see them.
+ *
+ * TODO(permissions): this is a seam, not a decision. It must come from the real role
+ * check once permission gating lands (ROADMAP Phase 1); hardcoded true keeps today's
+ * behaviour unchanged until then.
+ */
+export const canViewPackagePrice = true
 
 export const session = {
   companyId: 188311,

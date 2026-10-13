@@ -71,12 +71,19 @@ Ordered by how central the module is to daily use and how much it reuses Phase 1
 | 7 | E-Filing / Lapor Pajak | `router/efiling` | 54 | LayoutContainer | Lapor Pajak |
 | 8 | Settings | `router/setting` | 28 | LayoutContainer | Pengaturan |
 | 9 | EFIN register + migration | `router/efin`, `router/migrationEfin` | 7 | MekariPixel | Daftar Efin button |
-| 9b | Pengecekan NPWP, Riwayat aktivitas, Manajemen kuota/pengguna, Penandatanganan Coretax | decoupled `/v2/*` app (not in this repo) | — | — | Sidebar |
+| 9b | Pengecekan NPWP, Riwayat aktivitas, Manajemen pengguna, Penandatanganan Coretax | decoupled `/v2/*` app (not in this repo) | — | — | Sidebar |
+| 9c | Manajemen kuota (langganan & kuota) | 26Q3 Repackaging PRD, not the source app | 1 | LayoutContainer | Pengaturan › Perusahaan |
 | 10 | E-Registration | `router/eregistration` | 17 | Eregistration | — |
 | 11 | Onboarding, company setup, public | `router/onboarding`, `companySetup`, `public` | 12 | Blank / Plain | — |
 | 12 | Admin (internal back-office) | `router/admin` | 23 | Admin | — (separate shell) |
 
 Skip: `router/demo`, deprecated `router/taxManagement`, `pages/auth/Register`.
+
+Row 9c is a deliberate exception to 9b: Manajemen kuota lives at the `/v2/*` path the
+sidebar already links to, but it is built here rather than in the decoupled app because it
+is new product surface from the 26Q3 Repackaging PRD, not a port of an existing screen.
+The legacy "Kuota Upload" pages under `/main/setting/account/upload-quota` are superseded
+by it and are not being ported.
 
 ## Per-module checklist
 
