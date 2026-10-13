@@ -21,6 +21,15 @@ export interface SptTahunanBadan {
    * real value arrives with IF_TXR_039's interface-tracking status.
    */
   postedAt: string | null
+  /**
+   * Induk angka 18a — what Coretax has recorded in Modul TAM for the revisions before
+   * this one: PPh Pasal 29 actually paid (kredit pembayaran) less preliminary refunds
+   * through SKPPKP. Under Delta 2.0 (DJP, Oktober 2025) this replaces the KB/LB printed
+   * on the SPT being corrected, so a lebih bayar still waiting to be disbursed records
+   * as 0 and the pembetulan no longer bills the WP before the refund lands. Null on a
+   * normal return, which has no angka 18. Mock data — the real figure comes from TAM.
+   */
+  tamPembetulanSebelumnya: number | null
 }
 
 type BadgeType = 'announcement' | 'information' | 'warning' | 'completed' | 'critical'
@@ -184,14 +193,19 @@ export function findSection(key: string): SptSection | undefined {
   return undefined
 }
 
+/**
+ * `tamPembetulanSebelumnya` seeds the two Delta 2.0 cases DJP illustrates: a kurang bayar
+ * already settled, where TAM carries the accumulated payment (2023, 2021, 2016), and a
+ * lebih bayar still in restitusi, where TAM carries nothing yet and 18a reads 0 (2020, 2017).
+ */
 export const sptTahunanBadanSeed: SptTahunanBadan[] = [
-  { id: 'sptb-2023-1', year: 2023, revision: 1, status: 'READY', ntte: null, postedAt: '2026-03-02T09:14:00' },
-  { id: 'sptb-2022-0', year: 2022, revision: 0, status: 'READY', ntte: null, postedAt: '2026-02-18T16:40:00' },
-  { id: 'sptb-2021-4', year: 2021, revision: 4, status: 'IN_PROGRESS', ntte: null, postedAt: '2025-04-21T11:05:00' },
-  { id: 'sptb-2020-12', year: 2020, revision: 12, status: 'IN_PROGRESS', ntte: null, postedAt: '2024-04-19T08:52:00' },
-  { id: 'sptb-2019-5', year: 2019, revision: 5, status: 'IN_PROGRESS', ntte: null, postedAt: '2023-04-20T14:30:00' },
-  { id: 'sptb-2018-0', year: 2018, revision: 0, status: 'IN_PROGRESS', ntte: null, postedAt: null },
-  { id: 'sptb-2017-21', year: 2017, revision: 21, status: 'FAILED', ntte: null, postedAt: '2022-04-28T10:11:00' },
-  { id: 'sptb-2016-8', year: 2016, revision: 8, status: 'FAILED', ntte: null, postedAt: null },
-  { id: 'sptb-2015-0', year: 2015, revision: 0, status: 'SUBMITTED', ntte: '2839276489012946', postedAt: '2021-04-15T13:22:00' },
+  { id: 'sptb-2023-1', year: 2023, revision: 1, status: 'READY', ntte: null, postedAt: '2026-03-02T09:14:00', tamPembetulanSebelumnya: 1_000_000 },
+  { id: 'sptb-2022-0', year: 2022, revision: 0, status: 'READY', ntte: null, postedAt: '2026-02-18T16:40:00', tamPembetulanSebelumnya: null },
+  { id: 'sptb-2021-4', year: 2021, revision: 4, status: 'IN_PROGRESS', ntte: null, postedAt: '2025-04-21T11:05:00', tamPembetulanSebelumnya: 1_200_000 },
+  { id: 'sptb-2020-12', year: 2020, revision: 12, status: 'IN_PROGRESS', ntte: null, postedAt: '2024-04-19T08:52:00', tamPembetulanSebelumnya: 0 },
+  { id: 'sptb-2019-5', year: 2019, revision: 5, status: 'IN_PROGRESS', ntte: null, postedAt: '2023-04-20T14:30:00', tamPembetulanSebelumnya: 45_800_000 },
+  { id: 'sptb-2018-0', year: 2018, revision: 0, status: 'IN_PROGRESS', ntte: null, postedAt: null, tamPembetulanSebelumnya: null },
+  { id: 'sptb-2017-21', year: 2017, revision: 21, status: 'FAILED', ntte: null, postedAt: '2022-04-28T10:11:00', tamPembetulanSebelumnya: 0 },
+  { id: 'sptb-2016-8', year: 2016, revision: 8, status: 'FAILED', ntte: null, postedAt: null, tamPembetulanSebelumnya: 12_500_000 },
+  { id: 'sptb-2015-0', year: 2015, revision: 0, status: 'SUBMITTED', ntte: '2839276489012946', postedAt: '2021-04-15T13:22:00', tamPembetulanSebelumnya: null },
 ]
