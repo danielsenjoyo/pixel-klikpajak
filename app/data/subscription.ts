@@ -42,7 +42,7 @@ export const TOPUP_LAST_DAY = QUOTA_RESET_DAY - 1
 /** BR-002: Freemium grants 20 per module, lifetime. */
 export const FREEMIUM_QUOTA = 20
 /** BR-015: fixed cutover for the login-triggered migration off Basic/Small. */
-export const MIGRATION_CUTOVER = '03/10/2026'
+export const MIGRATION_CUTOVER = '03/01/2027'
 /** BR-004: Cumulative requires a minimum 6-month commitment. */
 export const CUMULATIVE_MIN_MONTHS = 6
 
