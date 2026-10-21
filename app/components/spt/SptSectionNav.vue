@@ -24,19 +24,21 @@ const props = defineProps<{
 const emit = defineEmits<{ 'jump-hasil': [] }>()
 const isCollapsed = defineModel<boolean>('collapsed', { default: false })
 
-const CHECK: Record<CheckState, { icon: string, color: string, variant?: 'fill', label: string }> = {
-  done: { icon: 'done', color: 'icon.success', variant: 'fill', label: 'Sudah diisi' },
-  required: { icon: 'warning-circular', color: 'icon.warning', variant: 'fill', label: 'Wajib diisi' },
-  optional: { icon: '', color: 'icon.subtle', label: 'Opsional' },
-}
-const check = (key: string) => CHECK[props.states[key] ?? 'optional']
-/** Only the states that actually draw an icon are worth explaining. */
-const legend = Object.values(CHECK).filter(c => c.icon)
+/**
+ * Step marker as SPT Masa PPN draws it: an outlined circle with the row's number until the
+ * section is done, then a filled brand circle with a check. "Done" already excludes sections
+ * with a blocking error (`applyIssues`), so a check never sits next to something that stops
+ * Lapor SPT.
+ */
+const isDone = (key: string) => props.states[key] === 'done'
+const stateLabel = (key: string) => (isDone(key) ? 'Sudah diisi' : 'Belum diisi')
+/** Sub-parts show their letter ("lampiran-12a" → "A") inside the marker. */
+const partLetter = (key: string) => key.slice(-1).toUpperCase()
 
 /**
  * §4.3/§4.4 — the list carries only what the return actually needs: the Induk, every
  * activated lampiran, anything already filled, and whatever the preparer is looking at.
- * The rest moves behind a collapse rather than being dropped, so orientation survives.
+ * Everything else is left out of the menu; answering the Induk brings it in.
  */
 const keysOf = (s: SptSection) => (s.children ? s.children.map(c => c.key) : [s.key])
 const isRelevant = (s: SptSection) =>
@@ -94,7 +96,7 @@ function toggleGroup(s: SptSection) {
         </div>
 
         <ul class="spt-nav__list">
-          <li v-for="s in relevant" :key="s.key">
+          <li v-for="(s, i) in relevant" :key="s.key">
             <!-- pixel-police-allow: expand/collapse nav group — Pixel 3 has no nav component (rules.md → exceptions) -->
             <button
               v-if="s.children"
@@ -105,9 +107,12 @@ function toggleGroup(s: SptSection) {
               @click="toggleGroup(s)"
             >
               <span class="spt-nav__label">
-                <MpIcon v-if="check(s.key).icon" :name="check(s.key).icon" :variant="check(s.key).variant" :color="check(s.key).color" size="sm" aria-hidden="true" />
+                <span class="spt-nav__step" :class="{ 'spt-nav__step--done': isDone(s.key) }" aria-hidden="true">
+                  <MpIcon v-if="isDone(s.key)" name="check" size="sm" color="icon.inverse" />
+                  <template v-else>{{ i + 1 }}</template>
+                </span>
                 {{ s.label }}
-                <span class="kp-sr-only">({{ check(s.key).label }})</span>
+                <span class="kp-sr-only">({{ stateLabel(s.key) }})</span>
               </span>
               <MpIcon :name="openGroups.has(s.key) ? 'caret-up' : 'caret-down'" size="sm" />
             </button>
@@ -119,9 +124,12 @@ function toggleGroup(s: SptSection) {
               :aria-current="s.key === activeKey ? 'page' : undefined"
             >
               <span class="spt-nav__label">
-                <MpIcon v-if="check(s.key).icon" :name="check(s.key).icon" :variant="check(s.key).variant" :color="check(s.key).color" size="sm" aria-hidden="true" />
+                <span class="spt-nav__step" :class="{ 'spt-nav__step--done': isDone(s.key) }" aria-hidden="true">
+                  <MpIcon v-if="isDone(s.key)" name="check" size="sm" color="icon.inverse" />
+                  <template v-else>{{ i + 1 }}</template>
+                </span>
                 {{ s.label }}
-                <span class="kp-sr-only">({{ check(s.key).label }})</span>
+                <span class="kp-sr-only">({{ stateLabel(s.key) }})</span>
               </span>
             </NuxtLink>
             <ul v-if="s.children && openGroups.has(s.key)" class="spt-nav__list spt-nav__list--nested">
@@ -133,20 +141,16 @@ function toggleGroup(s: SptSection) {
                   :aria-current="c.key === activeKey ? 'page' : undefined"
                 >
                   <span class="spt-nav__label">
-                    <MpIcon v-if="check(c.key).icon" :name="check(c.key).icon" :variant="check(c.key).variant" :color="check(c.key).color" size="sm" aria-hidden="true" />
-                    {{ c.label }}
-                    <span class="kp-sr-only">({{ check(c.key).label }})</span>
-                  </span>
+                <span class="spt-nav__step" :class="{ 'spt-nav__step--done': isDone(c.key) }" aria-hidden="true">
+                  <MpIcon v-if="isDone(c.key)" name="check" size="sm" color="icon.inverse" />
+                  <template v-else>{{ partLetter(c.key) }}</template>
+                </span>
+                {{ c.label }}
+                <span class="kp-sr-only">({{ stateLabel(c.key) }})</span>
+              </span>
                 </NuxtLink>
               </li>
             </ul>
-          </li>
-        </ul>
-
-        <ul class="spt-nav__legend" aria-label="Keterangan">
-          <li v-for="c in legend" :key="c.label">
-            <MpIcon :name="c.icon" :variant="c.variant" :color="c.color" size="sm" aria-hidden="true" />
-            <MpText size="label-small" color="text.secondary">{{ c.label }}</MpText>
           </li>
         </ul>
       </template>
@@ -258,6 +262,25 @@ function toggleGroup(s: SptSection) {
   gap: var(--mp-spacing-2);
 }
 
+/* Step marker, as SPT Masa PPN: numbered outline circle → filled brand circle with a check. */
+.spt-nav__step {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--mp-spacing-6);
+  height: var(--mp-spacing-6);
+  border: 1px solid var(--mp-colors-border-default);
+  border-radius: var(--mp-radii-full);
+  color: var(--mp-colors-text-secondary);
+  font-size: var(--mp-font-sizes-sm);
+  font-weight: var(--mp-font-weights-regular);
+}
+.spt-nav__step--done {
+  border-color: var(--mp-colors-background-brand-bold);
+  background: var(--mp-colors-background-brand-bold);
+}
+
 /* Ambient result chip (brief §4.2): visible on every section, click jumps to 17c. */
 .spt-nav__hasil {
   display: flex;
@@ -308,21 +331,6 @@ function toggleGroup(s: SptSection) {
 
 .spt-nav__hasil-amount--estimasi {
   border-bottom: 1px dashed var(--mp-colors-border-default);
-}
-
-.spt-nav__legend {
-  display: flex;
-  flex-direction: column;
-  gap: var(--mp-spacing-1);
-  margin: var(--mp-spacing-4) 0 0;
-  padding: var(--mp-spacing-3) 0 0;
-  border-top: 1px solid var(--mp-colors-border-default);
-  list-style: none;
-}
-.spt-nav__legend li {
-  display: flex;
-  align-items: center;
-  gap: var(--mp-spacing-2);
 }
 
 @media (max-width: 991px) {
