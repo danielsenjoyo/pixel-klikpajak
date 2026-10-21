@@ -52,16 +52,28 @@ app/
   components/spt/*          SPT Tahunan Badan: SptSectionNav (checkpoints), SptIndukForm, SptLampiran1,
                             SptAccountTable; lampiran engine: SptLampiranPage → SptTableBlock /
                             SptFormBlock / SptStatementsBlock / SptFieldsBlock, SptField
+  components/quota/*        Langganan & kuota: QuotaBanners (migrasi / kuota / perpanjangan —
+                            three independent slots), QuotaPackageCard, QuotaModuleCard,
+                            QuotaHistoryTable, QuotaBlockedModal (4 exhaustion routes),
+                            QuotaLoadError (shows no figures and no buy CTA, so a failed
+                            load cannot be mistaken for "kuota habis")
   data/spt1771Induk.ts      SPT Induk model, options, computeInduk(), LAMPIRAN_LAINNYA
   data/spt1771Lampiran1.ts  Lampiran 1A rows + formulas (Laba Rugi, Posisi Keuangan)
   data/spt1771Engine.ts     config types for lampiran (table/form/statements/fields blocks) + helpers
   data/spt1771LampiranDefs.ts  Lampiran 2–14 definitions (from Figma), lampiranDef(), emptyLampiran()
   data/spt1771Checkpoints.ts   done / required / optional per section; required lampiran from Induk
   data/taxCodes.ts          mock reference lists for lampiran selects (negara, mata uang, objek pajak…)
+  data/subscription.ts      package/quota model + the Repackaging business rules as pure
+                            functions (BR ids in comments), per-company seed, dev presets
   composables/useSidebar    collapse state, persisted in localStorage "sidebar" like the source
+  composables/useSubscription  active company's package, banner dismissal (memory-only) and the
+                            login-triggered migration off the legacy Basic/Small tiers
   data/navigation.ts        sidebar tree + active-module / active-leaf helpers
   data/session.ts           mock user-setting payload (company, NPWP, flags)
   pages/[...slug].vue       catch-all → KpNotPorted
+  dev/QuotaDevPanel.vue     scenario controls, dev only; OUTSIDE components/ so Nuxt does not
+                            auto-import it — the page loads it behind `import.meta.dev`, so it
+                            is dropped from a production build rather than merely hidden
 ```
 
 Index pages follow: `KpPageHeader` (title + breadcrumb) → `KpStage` → filter row → `MpTable`
@@ -81,6 +93,11 @@ means "lampiran empty, keep the manual entry"; the Induk field then shows `SptLi
 read-only with its `LINK_SOURCE` hint. Values from another lampiran use `FormItem.linked`
 (reads `ctx.lampiran`).
 
+Manajemen kuota (`/v2/main/setting/quota-management`) is the one screen built from a PRD
+rather than ported: `KpPageHeader` → `KpStage` → banner stack → summary cards → history table.
+Its quota, warning-threshold and exhaustion-routing rules live in `app/data/subscription.ts`
+as pure functions so they can be read against the PRD; components never re-derive them.
+
 Pages mirror source URLs (`/main/efaktur-v2/out` → `app/pages/main/efaktur-v2/out/index.vue`),
 so every nav link resolves and a ported page simply replaces the placeholder.
 
@@ -99,6 +116,9 @@ so every nav link resolves and a ported page simply replaces the placeholder.
    warning=orange, critical=red, completed=green.
    `MpFormControl` replaces the inner input's id with its own id (target the control id).
    `v-tooltip` must always get an object — never `undefined` (it throws); v-if the wrapper.
+   `MpBanner` reads its default slot once in `setup()` and caches the vnodes, so a mounted
+   banner keeps its original variant and copy when props change — give it a `:key` that
+   changes with the state.
    `MpInput is-clearable` emits `undefined` on clear — bind `:model-value` and coerce
    (`@update:model-value="q = $event ?? ''"`) so string methods don't throw.
    Inputs in table cells have no `<label>`: pass `aria-label` (`KpCurrencyInput` / `SptField`

@@ -15,3 +15,10 @@ export function formatRp(value: number | null | undefined): string {
 export function n(value: number | null | undefined): number {
   return value ?? 0
 }
+
+const countFormat = new Intl.NumberFormat('id-ID')
+
+/** 6000 → "6.000". Whole counts (quota, documents) — never the 2-decimal money format. */
+export function formatCount(value: number | null | undefined): string {
+  return countFormat.format(value ?? 0)
+}
