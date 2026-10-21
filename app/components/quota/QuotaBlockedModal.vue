@@ -36,7 +36,7 @@ import { formatDmyLong } from '~/utils/date'
 const props = defineProps<{ isOpen: boolean, moduleId: ModuleId | null }>()
 const emit = defineEmits<{ close: [] }>()
 
-const { subscription, renewalDays, route } = useSubscription()
+const { subscription, renewalDays, hasExpired, route } = useSubscription()
 
 const label = computed(() => (props.moduleId ? moduleLabel(props.moduleId) : 'upload'))
 const quota = computed(() => (props.moduleId ? subscription.value.quota[props.moduleId] : null))
@@ -109,8 +109,13 @@ const title = computed(() =>
           <!-- Standard, within 21 days of renewal → Account Manager, no top-up (BR-022 / AC-005). -->
           <template v-else-if="route === 'contact-am'">
             <MpText size="label">
-              Langganan Anda berakhir dalam {{ renewalDays }} hari, pada
-              {{ formatDmyLong(subscription.endDate) }}.
+              <template v-if="hasExpired">
+                Langganan Anda sudah berakhir pada {{ formatDmyLong(subscription.endDate) }}.
+              </template>
+              <template v-else>
+                Langganan Anda berakhir dalam {{ renewalDays }} hari, pada
+                {{ formatDmyLong(subscription.endDate) }}.
+              </template>
             </MpText>
             <MpText size="label-small" color="text.secondary">
               Hubungi Account Manager Anda untuk memperpanjang langganan beserta kuotanya.

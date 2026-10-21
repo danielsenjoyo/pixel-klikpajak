@@ -45,8 +45,12 @@ const STATES: { value: QuotaState, label: string }[] = [
   { value: 'exhausted', label: 'Habis' },
 ]
 
-/** 21 and 22 bracket the BR-022 threshold — the boundary worth clicking. */
-const RENEWAL_DAYS = [5, 12, 18, 21, 22, 45, 115]
+/**
+ * 21 and 22 bracket the BR-022 threshold — the boundary worth clicking. The negative
+ * entry reaches the lapsed-subscription state, which is otherwise unreachable from the
+ * seed and is where the contact-AM routing used to silently fall back to a top-up.
+ */
+const RENEWAL_DAYS = [-5, 0, 5, 12, 18, 21, 22, 45, 115]
 
 /**
  * The seeded value is rarely one of the presets (and drifts daily as the fixed end dates
@@ -134,7 +138,9 @@ onBeforeUnmount(() => {
           aria-label="Sisa hari langganan"
           @update:model-value="setRenewalDays(Number($event))"
         >
-          <option v-for="d in renewalOptions" :key="d" :value="d">{{ d }} hari</option>
+          <option v-for="d in renewalOptions" :key="d" :value="d">
+          {{ d < 0 ? `Sudah berakhir (${-d} hari lalu)` : d === 0 ? 'Berakhir hari ini' : `${d} hari` }}
+        </option>
         </MpSelect>
       </div>
 

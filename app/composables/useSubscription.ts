@@ -8,6 +8,7 @@ import {
   applyPackagePreset,
   daysToRenewal,
   exhaustionRoute,
+  isExpired,
   isLegacy,
   isMigrationDue,
   isNearingRenewal,
@@ -88,8 +89,19 @@ export function useSubscription() {
   )
 
   const overallState = computed(() => worstState(subscription.value))
+
+  /**
+   * Modules split by state rather than collapsed to the worst one. Story 1 AC-008 and
+   * Story 3 AC-001/AC-002 each promise a warning "for that module", so a module at 10%
+   * must stay visible even when a different module has already hit zero.
+   */
+  const exhaustedModules = computed(() => modules.value.filter(m => m.state === 'exhausted'))
+  const lowModules = computed(() => modules.value.filter(m => m.state === 'low'))
+
   const renewalDays = computed(() => daysToRenewal(subscription.value))
   const showRenewalNotice = computed(() => isNearingRenewal(subscription.value))
+  /** Past the end date — the renewal notice and the AM routing both still apply. */
+  const hasExpired = computed(() => isExpired(subscription.value))
 
   /** Which exhaustion route the active package implies (BR-021 / BR-022 / BR-023). */
   const route = computed(() => exhaustionRoute(subscription.value))
@@ -148,8 +160,11 @@ export function useSubscription() {
     subscription,
     modules,
     overallState,
+    exhaustedModules,
+    lowModules,
     renewalDays,
     showRenewalNotice,
+    hasExpired,
     route,
     justMigrated,
     awaitingMigration,

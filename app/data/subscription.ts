@@ -150,10 +150,24 @@ export function daysToRenewal(sub: Subscription, today?: Date): number | null {
   return sub.endDate ? daysUntil(sub.endDate, today) : null
 }
 
-/** BR-022 / VR-02. Freemium has no end date, so it is never "nearing renewal". */
+/** True once the end date has passed. Freemium has none, so it never expires (BR-002). */
+export function isExpired(sub: Subscription, today?: Date): boolean {
+  const days = daysToRenewal(sub, today)
+  return days !== null && days < 0
+}
+
+/**
+ * BR-022 / VR-02. Freemium has no end date, so it is never "nearing renewal".
+ *
+ * A lapsed subscription stays inside this window rather than dropping out of the far
+ * side of it. The floor used to be `days >= 0`, which meant that the day after a Standard
+ * subscription expired, exhaustionRoute() silently flipped from 'contact-am' back to
+ * 'topup' — offering a self-serve top-up to someone whose subscription had already ended,
+ * which is the single outcome BR-022 exists to prevent.
+ */
 export function isNearingRenewal(sub: Subscription, today?: Date): boolean {
   const days = daysToRenewal(sub, today)
-  return days !== null && days <= RENEWAL_WARNING_DAYS && days >= 0
+  return days !== null && days <= RENEWAL_WARNING_DAYS
 }
 
 export function worstState(sub: Subscription): QuotaState {
@@ -212,6 +226,16 @@ export function migratedToFreemium(sub: Subscription): Subscription {
  * whole state matrix without any dev-only control. Dates are relative to late 2026 to
  * keep the 21-day renewal window reachable.
  */
+/**
+ * The two renewal-window scenarios carry dates relative to today rather than pinned ones,
+ * so the 21-day window (BR-022) and the end-date-tied Cumulative top-up (BR-023) stay
+ * reachable whenever the prototype is opened. Pinned dates had already drifted past: both
+ * of these had expired or were days from it. Term length is a declared field
+ * (`termMonths`), not derived from the dates, so nothing contradicts the start dates.
+ */
+const STANDARD_RENEWAL_END = dmyFromToday(18)
+const CUMULATIVE_RENEWAL_END = dmyFromToday(5)
+
 export const SUBSCRIPTIONS: Record<number, Subscription> = {
   // Standard, eFaktur at exactly the 20% line and 18 days from renewal: the AC-013 case
   // where the quota warning and the renewal reminder must both show.
@@ -219,7 +243,7 @@ export const SUBSCRIPTIONS: Record<number, Subscription> = {
     packageId: 'quota',
     packageName: 'Klikpajak Quota',
     startDate: '01/01/2026',
-    endDate: '26/10/2026',
+    endDate: STANDARD_RENEWAL_END,
     termMonths: null,
     quota: {
       'efaktur': { total: 1000, used: 800 },
@@ -231,7 +255,7 @@ export const SUBSCRIPTIONS: Record<number, Subscription> = {
     history: [
       { id: 'inv-2025-01', packageName: 'Pro 300', startDate: '01/01/2025', endDate: '31/12/2025', quota: { 'efaktur': 300, 'ebupot-unifikasi': 300 }, isActive: false, amount: 1_800_000 },
       { id: 'inv-2026-03', packageName: 'Top Up Kuota e-Faktur', startDate: '05/03/2026', endDate: '02/04/2026', quota: { efaktur: 300 }, isActive: false, amount: 500_100 },
-      { id: 'inv-2026-01', packageName: 'Klikpajak Quota', startDate: '01/01/2026', endDate: '26/10/2026', quota: { 'efaktur': 1000, 'ebupot-unifikasi': 500, 'ebupot-2126': 300 }, isActive: true, amount: 2_160_000 },
+      { id: 'inv-2026-01', packageName: 'Klikpajak Quota', startDate: '01/01/2026', endDate: STANDARD_RENEWAL_END, quota: { 'efaktur': 1000, 'ebupot-unifikasi': 500, 'ebupot-2126': 300 }, isActive: true, amount: 2_160_000 },
     ],
   },
 
@@ -274,7 +298,7 @@ export const SUBSCRIPTIONS: Record<number, Subscription> = {
     packageId: 'quota-cumulative',
     packageName: 'Klikpajak Quota - Cumulative',
     startDate: '20/04/2026',
-    endDate: '20/10/2026',
+    endDate: CUMULATIVE_RENEWAL_END,
     termMonths: CUMULATIVE_MIN_MONTHS,
     quota: {
       'efaktur': { total: 6000, used: 4900 },
@@ -282,7 +306,7 @@ export const SUBSCRIPTIONS: Record<number, Subscription> = {
       'ebupot-2126': { total: 1200, used: 1200 },
     },
     history: [
-      { id: 'inv-cum-2026', packageName: 'Klikpajak Quota - Cumulative', startDate: '20/04/2026', endDate: '20/10/2026', quota: { 'efaktur': 6000, 'ebupot-unifikasi': 1800, 'ebupot-2126': 1200 }, isActive: true, amount: 12_312_000 },
+      { id: 'inv-cum-2026', packageName: 'Klikpajak Quota - Cumulative', startDate: '20/04/2026', endDate: CUMULATIVE_RENEWAL_END, quota: { 'efaktur': 6000, 'ebupot-unifikasi': 1800, 'ebupot-2126': 1200 }, isActive: true, amount: 12_312_000 },
     ],
   },
 

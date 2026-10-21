@@ -12,23 +12,27 @@ import { MIGRATION_CUTOVER, isFreemium } from '~/data/subscription'
 import { formatDmyLong } from '~/utils/date'
 
 /**
- * Three independent banner slots — migration, quota and renewal.
+ * Independent banner slots — migration, Freemium lifetime notice, exhausted, low, renewal.
  *
  * AC-013 is explicit that a quota warning and a renewal reminder must both be visible at
- * once "without overriding each other", so this is a stack, not a precedence chain. Only
- * the quota slot picks one of its own variants.
+ * once "without overriding each other", so this is a stack, not a precedence chain. The
+ * same reasoning splits exhausted from low: they are separate conditions about separate
+ * modules, so one must not silence the other.
+ *
+ * The one deliberate exception is the Freemium lifetime notice, which BR-020 and AC-010
+ * say is *replaced* by a warning rather than shown beside it — a "your quota is lifetime"
+ * reassurance next to a red warning weakens the warning.
  */
 const emit = defineEmits<{ addQuota: [] }>()
 
 const { companyId } = useSession()
-const { subscription, modules, overallState, renewalDays, showRenewalNotice, justMigrated, awaitingMigration, isDismissed, dismiss } = useSubscription()
+const { subscription, overallState, exhaustedModules, lowModules, renewalDays, showRenewalNotice, hasExpired, justMigrated, awaitingMigration, isDismissed, dismiss } = useSubscription()
 
 /** Per company, so switching company brings a dismissed banner back. */
 const key = (kind: string) => `${kind}:${companyId.value}`
 
-const affected = computed(() =>
-  modules.value.filter(m => m.state === overallState.value).map(m => m.label).join(', '),
-)
+const exhaustedLabels = computed(() => exhaustedModules.value.map(m => m.label).join(', '))
+const lowLabels = computed(() => lowModules.value.map(m => m.label).join(', '))
 
 const showMigration = computed(() =>
   (justMigrated.value || awaitingMigration.value) && !isDismissed(key('migration')),
@@ -41,13 +45,22 @@ const showMigration = computed(() =>
  */
 const showFreemiumInfo = computed(() => isFreemium(subscription.value) && overallState.value === 'healthy')
 
-const showQuotaWarning = computed(() => overallState.value !== 'healthy' && !isDismissed(key('quota')))
+const showExhausted = computed(() => exhaustedModules.value.length > 0 && !isDismissed(key('exhausted')))
+const showLow = computed(() => lowModules.value.length > 0 && !isDismissed(key('low')))
 
 const showRenewal = computed(() => showRenewalNotice.value && !isDismissed(key('renewal')))
+
+/** "dalam 0 hari" reads as a bug, and a lapsed subscription is not a countdown at all. */
+const renewalTitle = computed(() => {
+  if (renewalDays.value === null) return ''
+  if (renewalDays.value < 0) return 'Langganan sudah berakhir'
+  if (renewalDays.value === 0) return 'Langganan berakhir hari ini'
+  return `Langganan berakhir dalam ${renewalDays.value} hari`
+})
 </script>
 
 <template>
-  <div v-if="showMigration || showFreemiumInfo || showQuotaWarning || showRenewal" class="quota-banners">
+  <div v-if="showMigration || showFreemiumInfo || showExhausted || showLow || showRenewal" class="quota-banners">
     <!-- 1. Migration — Story 2 AC-002 after cutover, AC-006 before it. -->
     <!-- TODO(copy): final migration wording is owned by GTM/Marketing and was not drafted in the PRD. -->
     <MpBanner v-if="showMigration" :key="justMigrated ? 'migrated' : 'pending'" id="quota-banner-migration" variant="info">
@@ -79,41 +92,63 @@ const showRenewal = computed(() => showRenewalNotice.value && !isDismissed(key('
       </MpBannerLink>
     </MpBanner>
 
-    <!-- 2b. Low or exhausted quota — BR-012, Story 1 AC-008, Story 3 AC-001/AC-002. -->
+    <!-- 2b. Exhausted and low are two separate banners, not one "worst state" banner.
+         With a single banner keyed on the worst state, a module sitting at 10% vanished
+         from the stack entirely as soon as a different module hit zero — the same
+         suppression AC-013 forbids between the quota and renewal notices, happening
+         inside the quota slot. Story 1 AC-008 and Story 3 AC-001/AC-002 each promise a
+         warning "for that module". -->
     <!-- MpBanner reads its default slot once in setup() and caches the vnodes, so an
-         already-mounted banner does not pick up a new variant or new copy. Keying on the
-         state forces a fresh instance when the quota crosses a threshold. -->
+         already-mounted banner does not pick up new copy. Keying on the module list
+         forces a fresh instance when the affected modules change. -->
     <MpBanner
-      v-if="showQuotaWarning"
-      :key="overallState"
-      id="quota-banner-warning"
-      :variant="overallState === 'exhausted' ? 'danger' : 'warning'"
+      v-if="showExhausted"
+      :key="`exhausted-${exhaustedLabels}`"
+      id="quota-banner-exhausted"
+      variant="danger"
     >
-      <MpBannerIcon id="quota-banner-warning-icon" />
-      <MpBannerTitle id="quota-banner-warning-title">
-        {{ overallState === 'exhausted' ? 'Kuota upload habis' : 'Kuota upload hampir habis' }}
-      </MpBannerTitle>
-      <MpBannerDescription id="quota-banner-warning-desc">
-        {{ overallState === 'exhausted'
-          ? `Kuota ${affected} Anda sudah habis, silakan tambah kuota.`
-          : `Kuota ${affected} Anda hampir habis, silakan tambah kuota.` }}
+      <MpBannerIcon id="quota-banner-exhausted-icon" />
+      <MpBannerTitle id="quota-banner-exhausted-title">Kuota upload habis</MpBannerTitle>
+      <MpBannerDescription id="quota-banner-exhausted-desc">
+        Kuota {{ exhaustedLabels }} Anda sudah habis, silakan tambah kuota.
       </MpBannerDescription>
       <!-- No action here on purpose: the module card below carries the same one, scoped
-           to the module, so repeating it made three identical "Tambah kuota" compete and
-           none of them stand out. The Freemium notice above keeps its link per AC-007. -->
+           to the module, so repeating it made identical "Tambah kuota" buttons compete. -->
       <!-- AC-011: dismissible, but held in memory only so it returns on reload. -->
-      <MpBannerCloseButton id="quota-banner-warning-close" @click="dismiss(key('quota'))" />
+      <MpBannerCloseButton id="quota-banner-exhausted-close" @click="dismiss(key('exhausted'))" />
+    </MpBanner>
+
+    <MpBanner
+      v-if="showLow"
+      :key="`low-${lowLabels}`"
+      id="quota-banner-low"
+      variant="warning"
+    >
+      <MpBannerIcon id="quota-banner-low-icon" />
+      <MpBannerTitle id="quota-banner-low-title">Kuota upload hampir habis</MpBannerTitle>
+      <MpBannerDescription id="quota-banner-low-desc">
+        Kuota {{ lowLabels }} Anda hampir habis, silakan tambah kuota.
+      </MpBannerDescription>
+      <MpBannerCloseButton id="quota-banner-low-close" @click="dismiss(key('low'))" />
     </MpBanner>
 
     <!-- 3. Renewal — AC-012: fires on the 21-day threshold regardless of quota state.
          VR-03: wording is identical for Standard and Cumulative. -->
-    <MpBanner v-if="showRenewal" :key="`renewal-${companyId}`" id="quota-banner-renewal" variant="info">
+    <MpBanner
+      v-if="showRenewal"
+      :key="`renewal-${hasExpired}-${renewalDays}-${companyId}`"
+      id="quota-banner-renewal"
+      :variant="hasExpired ? 'warning' : 'info'"
+    >
       <MpBannerIcon id="quota-banner-renewal-icon" />
-      <MpBannerTitle id="quota-banner-renewal-title">
-        Langganan berakhir dalam {{ renewalDays }} hari
-      </MpBannerTitle>
+      <MpBannerTitle id="quota-banner-renewal-title">{{ renewalTitle }}</MpBannerTitle>
       <MpBannerDescription id="quota-banner-renewal-desc">
-        Perpanjang langganan Anda sebelum {{ formatDmyLong(subscription.endDate) }} agar layanan tidak terhenti.
+        <template v-if="hasExpired">
+          Langganan Anda berakhir pada {{ formatDmyLong(subscription.endDate) }}. Perpanjang untuk melanjutkan layanan.
+        </template>
+        <template v-else>
+          Perpanjang langganan Anda sebelum {{ formatDmyLong(subscription.endDate) }} agar layanan tidak terhenti.
+        </template>
       </MpBannerDescription>
       <MpBannerCloseButton id="quota-banner-renewal-close" @click="dismiss(key('renewal'))" />
     </MpBanner>

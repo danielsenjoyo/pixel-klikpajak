@@ -12,7 +12,17 @@ import { formatDmyLong } from '~/utils/date'
  */
 const emit = defineEmits<{ addQuota: [] }>()
 
-const { subscription } = useSubscription()
+const { subscription, hasExpired } = useSubscription()
+
+/**
+ * A subscription past its end date must not keep claiming "Aktif". Legacy packages keep
+ * their own badge because they are pre-cutover, not expired (BR-015).
+ */
+const badge = computed(() => {
+  if (isLegacy(subscription.value)) return { type: 'announcement' as const, label: 'Paket lama' }
+  if (hasExpired.value) return { type: 'critical' as const, label: 'Berakhir' }
+  return { type: 'completed' as const, label: 'Aktif' }
+})
 
 const behaviour = computed(() => {
   const sub = subscription.value
@@ -32,9 +42,7 @@ const validity = computed(() =>
       <MpText size="label-small" color="text.secondary">Paket kuota aktif</MpText>
       <div class="quota-package__title">
         <MpText as="h2" size="h2" weight="semiBold" class="quota-package__name">{{ subscription.packageName }}</MpText>
-        <MpBadge for="tableStatus" :type="isLegacy(subscription) ? 'announcement' : 'completed'">
-          {{ isLegacy(subscription) ? 'Paket lama' : 'Aktif' }}
-        </MpBadge>
+        <MpBadge for="tableStatus" :type="badge.type">{{ badge.label }}</MpBadge>
       </div>
 
       <dl class="quota-package__meta">
