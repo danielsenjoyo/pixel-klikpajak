@@ -271,16 +271,20 @@ const bodyItems = computed<BodyItem[]>(() => {
   if (g) {
     let index = 0
     let lastHeading: string | undefined
+    // Only a section's first group carries its heading; the rest inherit it, so the
+    // heading still shows when that first group is empty (Lampiran 9 with only Kelompok 2).
+    let heading: string | undefined
     for (const opt of g.options) {
+      if (opt.heading) heading = opt.heading
       const inGroup = rows.value.filter(row => String(row[g.key] ?? '') === opt.value)
       const groupRecap = recapRows.filter(r => r.after === opt.value)
       // An empty group is not shown. Lampiran 9 has ten of them, and printing every one
       // above an empty register buried the grid under headings that said nothing — the
       // group a row belongs to is already its own column.
       if (!inGroup.length && !groupRecap.length) continue
-      if (opt.heading && opt.heading !== lastHeading) {
-        out.push({ kind: 'heading', label: opt.heading })
-        lastHeading = opt.heading
+      if (heading && heading !== lastHeading) {
+        out.push({ kind: 'heading', label: heading })
+        lastHeading = heading
       }
       out.push({ kind: 'group', label: opt.label })
       for (const row of inGroup) out.push({ kind: 'data', row, index: index++ })
