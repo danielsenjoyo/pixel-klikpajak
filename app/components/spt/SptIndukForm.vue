@@ -20,6 +20,7 @@ import type { Company } from '~/data/session'
 import type { SectionData } from '~/data/spt1771Engine'
 import { SEKTOR_USAHA } from '~/data/spt1771Lampiran1'
 import {
+  HASIL_LABEL,
   INDUK_TABS,
   LAMPIRAN_LAINNYA,
   LINK_ORIGIN,
@@ -65,6 +66,9 @@ const props = defineProps<{
   /** Every lampiran's data — Bagian I asks whether 12B and 14 carry anything. */
   lampiran: Record<string, SectionData>
 }>()
+
+/** 17c's own reading — on a pembetulan `hasil` describes 18b, so it can't label 17c. */
+const label17c = computed(() => HASIL_LABEL[props.totals.f17c > 0 ? 'kb' : props.totals.f17c < 0 ? 'lb' : 'nihil'])
 
 const tabIndex = computed({
   get: () => Math.max(0, INDUK_TABS.findIndex(t => t.key === tab.value)),
@@ -309,15 +313,18 @@ const tarifHint = computed(() => (props.totals.is31eEligible
               <KpYesNo id="induk-f17b" v-model="form.f17b" />
               <KpCurrencyInput id="induk-f17b-amount" v-model="form.f17bAmount" :is-disabled="!form.f17b" aria-label="Jumlah pajak yang diangsur atau ditunda" />
             </SptLadderRow>
-            <SptLadderRow id="induk-f17c" no="17. c." :label="`PPh masih harus / lebih dibayar — ${hasil.label.toUpperCase()}`" formula="17a − 17b" :value="totals.f17c" is-total />
+            <!-- The return is settled on 17c, or on 18b for a pembetulan: that line is the total and carries Hasil SPT. -->
+            <SptLadderRow id="induk-f17c" no="17. c." :label="`PPh masih harus / lebih dibayar — ${label17c.toUpperCase()}`" formula="17a − 17b" :value="totals.f17c" :is-total="!isPembetulan" />
 
-            <SptHasilSpt :hasil="hasil" />
+            <SptHasilSpt v-if="!isPembetulan" :hasil="hasil" />
 
-            <template v-if="isPembetulan">
+            <template v-else>
               <SptLadderRow no="18. a." label="PPh kurang / lebih bayar pada SPT yang dibetulkan">
                 <KpCurrencyInput id="induk-f18a" v-model="form.f18aAmount" aria-label="PPh kurang / lebih bayar pada SPT yang dibetulkan" />
               </SptLadderRow>
-              <SptLadderRow id="induk-f18b" no="18. b." label="PPh kurang / lebih bayar karena pembetulan" formula="17a − 18a" :value="totals.f18b" />
+              <SptLadderRow id="induk-f18b" no="18. b." :label="`PPh kurang / lebih bayar karena pembetulan — ${hasil.label.toUpperCase()}`" formula="17a − 18a" :value="totals.f18b" is-total />
+
+              <SptHasilSpt :hasil="hasil" />
             </template>
 
             <template v-if="totals.isLebihBayar">

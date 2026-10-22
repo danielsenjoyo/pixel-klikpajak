@@ -3,8 +3,8 @@ import { MpBadge, MpBanner, MpBannerDescription, MpText } from '@mekari/pixel3'
 import type { HasilSpt } from '~/data/spt1771Induk'
 import { formatRp } from '~/utils/currency'
 
-// Hasil SPT — the three-state result of angka 17c (brief §5). It sits directly under
-// the 17c row rather than in a banner of its own, and stays an estimate until every
+// Hasil SPT — the three-state result of angka 17c, or 18b on a pembetulan (brief §5).
+// It sits directly under that row rather than in a banner of its own, and stays an estimate until every
 // required lampiran and field is filled.
 const props = defineProps<{ hasil: HasilSpt }>()
 

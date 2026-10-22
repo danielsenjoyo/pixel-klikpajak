@@ -113,6 +113,7 @@ const indukTab = ref<IndukTab>(isIndukTab(route.query.tab) ? route.query.tab : '
 const lampiranPart = ref('')
 watch(sectionKey, () => { lampiranPart.value = '' })
 
+const nuxtApp = useNuxtApp()
 let flashTimer: ReturnType<typeof setTimeout> | undefined
 let flashed: Element | null = null
 
@@ -125,7 +126,17 @@ async function goToIssue(issue: Pick<Issue, 'section' | 'tab' | 'target'>) {
     if (issue.section === 'induk') { if (isIndukTab(issue.tab)) indukTab.value = issue.tab }
     else lampiranPart.value = issue.tab
   }
-  if (sectionKey.value !== issue.section) await navigateTo(detailPath({ id }, issue.section))
+  if (sectionKey.value !== issue.section) {
+    // A route change scrolls to the top once the page settles (Nuxt's scrollBehavior, on
+    // "page:loading:end" + a frame) — wait it out so it doesn't undo the scroll below.
+    const settled = new Promise<void>((resolve) => {
+      const done = () => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      nuxtApp.hooks.hookOnce('page:loading:end', done)
+      setTimeout(resolve, 1000)
+    })
+    await navigateTo(detailPath({ id }, issue.section))
+    await settled
+  }
   await nextTick()
   if (!issue.target) return
   const el = document.getElementById(issue.target)
@@ -140,7 +151,8 @@ async function goToIssue(issue: Pick<Issue, 'section' | 'tab' | 'target'>) {
   flashTimer = setTimeout(() => { el.classList.remove('kp-flash'); flashed = null }, 2000)
 }
 
-const jumpToHasil = () => goToIssue({ section: 'induk', tab: 'perhitungan', target: 'induk-hasil' })
+/** Hasil in the menu → Induk › Perhitungan PPh, on the line it is read from: 17c normal, 18b pembetulan. */
+const jumpToHasil = () => goToIssue({ section: 'induk', tab: 'perhitungan', target: `induk-f${hasil.value.line}` })
 onBeforeUnmount(() => clearTimeout(flashTimer))
 
 const status = computed(() => {
