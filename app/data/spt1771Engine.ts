@@ -6,6 +6,7 @@
  *   statements — Ya/Tidak (or checklist) declarations
  *   fields     — labelled inputs in the 640px form column
  */
+import type { ListImportSpec } from '~/data/spt1771Import'
 import { formatNumber, formatRp } from '~/utils/currency'
 import { parseDmy } from '~/utils/date'
 
@@ -28,6 +29,8 @@ export type SectionData = Record<string, Row[] | BlockValues>
 export interface Ctx {
   /** Tax year of the SPT (e.g. 2023). */
   year: number
+  /** NPWP of the reporting entity — import templates must carry the same one. */
+  npwp: string
   /** SPT Induk 9 - 10 — penghasilan kena pajak the tarif applies to. */
   pkp: number
   /** SPT Induk D.9 — penghasilan kena pajak before the D.10 facility. */
@@ -340,6 +343,8 @@ export interface LampiranPart {
   title?: string
   /** Part only renders when this holds — e.g. Lampiran 2B needs H.21.c or H.21.d. */
   when?: (ctx: Omit<Ctx, 'section'>) => boolean
+  /** DJP import template filling this part's table (spt1771ImportSpecs.ts). */
+  import?: ListImportSpec
   blocks: Block[]
 }
 

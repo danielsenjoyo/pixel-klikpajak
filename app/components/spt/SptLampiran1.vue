@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { MpTab, MpTabList, MpTabs, MpText } from '@mekari/pixel3'
+import { MpButton, MpTab, MpTabList, MpTabs, MpText, toast } from '@mekari/pixel3'
+import type { ImportCtx } from '~/data/spt1771Import'
+import { lampiran1Import, type L1Payload } from '~/data/spt1771ImportSpecs'
 import {
   SEKTOR_USAHA,
   penghasilanNetoFiskal,
@@ -11,7 +13,7 @@ import { formatRp } from '~/utils/currency'
 
 // Lampiran 1 (Figma "SPT / lampiran 1A / A|B"): business sector, then tabs for
 // A. Laporan Laba Rugi and B. Laporan Posisi Keuangan.
-defineProps<{ isReadOnly?: boolean }>()
+defineProps<{ importCtx: ImportCtx, isReadOnly?: boolean }>()
 const data = defineModel<Lampiran1Data>({ required: true })
 
 const tab = ref(0)
@@ -24,11 +26,39 @@ const isDerived = computed(() => data.value.sektor !== 'BC01')
 const jumlahAset = computed(() => posisiKeuanganValue(data.value, '1700'))
 const jumlahPasiva = computed(() => posisiKeuanganValue(data.value, '3300'))
 const isBalanced = computed(() => jumlahAset.value === jumlahPasiva.value)
+
+// ── Import laporan keuangan (DJP template CIT_L1x, one per sektor) ───────────
+const isImportOpen = ref(false)
+const importSpec = computed(() => lampiran1Import(data.value))
+const hasValue = (v: unknown) => v !== null && v !== undefined && v !== ''
+/** Accounts already carrying a value — the modal offers "Ganti" only when there are some. */
+const filledAccounts = computed(() =>
+  Object.values(data.value.labaRugi).filter(v => Object.values(v).some(hasValue)).length
+  + Object.values(data.value.posisiKeuangan).filter(hasValue).length)
+
+/**
+ * "Perbarui" writes only the accounts in the file. "Ganti" first clears each statement
+ * the file carries — a file with only the Laba Rugi sheet leaves the neraca alone.
+ */
+function applyImport(payload: L1Payload, mode: 'append' | 'replace') {
+  const labaRugi = mode === 'replace' && payload.hasLabaRugi ? {} : { ...data.value.labaRugi }
+  const posisi = mode === 'replace' && payload.hasPosisi ? {} : { ...data.value.posisiKeuangan }
+  for (const [code, v] of Object.entries(payload.labaRugi)) labaRugi[code] = { ...labaRugi[code], ...v }
+  Object.assign(posisi, payload.posisiKeuangan)
+  data.value = { ...data.value, labaRugi, posisiKeuangan: posisi }
+  const n = Object.keys(payload.labaRugi).length + Object.keys(payload.posisiKeuangan).length
+  toast.notify({ id: 'toast-l1-imported', variant: 'success', title: `${n} akun berhasil diimpor` })
+}
 </script>
 
 <template>
   <div class="spt-l1">
-    <MpText as="h2" size="h2" weight="semiBold" class="spt-l1__title">Lampiran {{ sektor.lampiran }} — Rekonsiliasi Laporan Keuangan</MpText>
+    <div class="spt-l1__head">
+      <MpText as="h2" size="h2" weight="semiBold" class="spt-l1__title">Lampiran {{ sektor.lampiran }} — Rekonsiliasi Laporan Keuangan</MpText>
+      <MpButton v-if="!isReadOnly" id="l1-import" variant="secondary" left-icon="upload" class="spt-l1__import" @click="isImportOpen = true">
+        Impor laporan keuangan
+      </MpButton>
+    </div>
     <MpText as="p" size="body" color="text.secondary" class="spt-l1__subtitle-variant">
       Sektor usaha: <strong>{{ sektor.label }}</strong> — dipilih pada SPT Induk bagian B
     </MpText>
@@ -67,6 +97,15 @@ const isBalanced = computed(() => jumlahAset.value === jumlahPasiva.value)
         Jumlah aset ({{ formatRp(jumlahAset) }}) belum sama dengan jumlah liabilitas dan ekuitas ({{ formatRp(jumlahPasiva) }}).
       </p>
     </template>
+
+    <SptImportModal
+      id="l1-import-modal"
+      v-model:open="isImportOpen"
+      :spec="importSpec"
+      :ctx="importCtx"
+      :existing="filledAccounts"
+      @apply="applyImport"
+    />
   </div>
 </template>
 
@@ -77,8 +116,20 @@ const isBalanced = computed(() => jumlahAset.value === jumlahPasiva.value)
   min-width: 0;
 }
 
-.spt-l1__title {
+.spt-l1__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mp-spacing-4);
   margin: 0 0 var(--mp-spacing-4);
+}
+
+.spt-l1__title {
+  margin: 0;
+}
+
+.spt-l1__import {
+  flex-shrink: 0;
 }
 
 .spt-l1__subtitle-variant {

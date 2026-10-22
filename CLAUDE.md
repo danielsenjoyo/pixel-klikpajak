@@ -51,7 +51,8 @@ app/
   components/KpFileField    "Pilih file" upload with format hint (stores file name)
   components/spt/*          SPT Tahunan Badan: SptSectionNav (checkpoints), SptIndukForm, SptLampiran1,
                             SptAccountTable; lampiran engine: SptLampiranPage → SptTableBlock /
-                            SptFormBlock / SptStatementsBlock / SptFieldsBlock, SptField
+                            SptFormBlock / SptStatementsBlock / SptFieldsBlock, SptField;
+                            SptImportModal (DJP template import: unduh template → unggah → review → Tambahkan/Ganti)
   components/quota/*        Langganan & kuota: QuotaBanners (migrasi / kuota / perpanjangan —
                             three independent slots), QuotaPackageCard, QuotaModuleCard,
                             QuotaHistoryTable, QuotaBlockedModal (4 exhaustion routes),
@@ -63,6 +64,11 @@ app/
   data/spt1771LampiranDefs.ts  Lampiran 2–14 definitions (from Figma), lampiranDef(), emptyLampiran()
   data/spt1771Checkpoints.ts   done / required / optional per section; required lampiran from Induk
   data/taxCodes.ts          mock reference lists for lampiran selects (negara, mata uang, objek pajak…)
+  data/spt1771Import.ts     import engine: template builder + parser for DJP's .xlsx/.csv templates
+                            (NPWP SPT / Tahun Pajak check, codes matched without leading zeros, row rejects)
+  data/spt1771ImportSpecs.ts  one spec per DJP template (1-pager SPT Badan (2) items 6–12): L1 laporan
+                            keuangan (per sektor), L9, L10A, L11A I/II/III/V — headers verbatim from DJP
+  utils/xlsx.ts             zero-dependency .xlsx read (DecompressionStream) / write (stored zip)
   data/subscription.ts      package/quota model + the Repackaging business rules as pure
                             functions (BR ids in comments), per-company seed, dev presets
   composables/useSidebar    collapse state, persisted in localStorage "sidebar" like the source
@@ -88,6 +94,9 @@ The layout adds no content padding — pages own it.
 Lampiran 2–14 are config, not components: add or change one in `spt1771LampiranDefs.ts`
 (table columns with `group` for two-row headers, `compute` for read-only values, `mode: 'drawer'`
 for "Tambah data" drawers). If an Induk answer requires it, add the rule to `requiredLampiran()`.
+Imports attach per part: `LampiranPart.import` (a spec from `spt1771ImportSpecs.ts`) puts an
+"Impor data" button on the part header; Lampiran 1 has its own "Impor laporan keuangan".
+To add one, transcribe the DJP template's "Petunjuk Pengisian" sheet into a `listImport()` spec.
 Lampiran amounts that fill SPT Induk go through `lampiranLinks()` → `computeInduk()`: `null`
 means "lampiran empty, keep the manual entry"; the Induk field then shows `SptLinkedAmount`
 read-only with its `LINK_SOURCE` hint. Values from another lampiran use `FormItem.linked`

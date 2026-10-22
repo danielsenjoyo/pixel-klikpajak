@@ -61,6 +61,7 @@ const totals = computed(() => computeInduk(draft.value.induk, penghasilanNetoFis
 /** What every lampiran renders against — and, so the two agree, what its field rules see. */
 const lampiranCtx = computed(() => ({
   year: spt.value?.year ?? 0,
+  npwp: company.value.npwp,
   pkp: totals.value.pkp,
   pkpAngka9: totals.value.d9,
   penghasilanNeto: totals.value.d4,
@@ -367,7 +368,12 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
                 :is-but="!!company.isBut"
                 :lampiran="draft.lampiran"
               />
-              <SptLampiran1 v-else-if="sectionKey === 'lampiran-1'" v-model="draft.lampiran1" :is-read-only="isReadOnly" />
+              <SptLampiran1
+                v-else-if="sectionKey === 'lampiran-1'"
+                v-model="draft.lampiran1"
+                :import-ctx="{ npwp: company.npwp, year: spt.year }"
+                :is-read-only="isReadOnly"
+              />
               <SptLampiranPage
                 v-else-if="lampiranPage"
                 :key="sectionKey"
