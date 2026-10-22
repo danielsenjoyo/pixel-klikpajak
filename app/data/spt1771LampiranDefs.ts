@@ -28,11 +28,13 @@ import {
   BENTUK_PENANAMAN_SISA_LEBIH,
   JENIS_BIAYA_PROMOSI,
   JENIS_PAJAK_DIPOTONG,
+  JENIS_PEMENUHAN,
   JENIS_TRANSAKSI,
   KATEGORI_KREDIT,
   KELOMPOK_BANGUNAN,
   MATA_UANG,
   METODE_HARGA,
+  METODE_PENGHAPUSAN,
   NEGARA,
   NEGARA_P3B,
   NON_OBJEK_PAJAK,
@@ -43,6 +45,14 @@ import {
   codeName,
   toOptions,
 } from '~/data/taxCodes'
+import {
+  IMPORT_L9,
+  IMPORT_L10A,
+  IMPORT_L11A_DEBITUR,
+  IMPORT_L11A_ENTERTAINMENT,
+  IMPORT_L11A_PIUTANG,
+  IMPORT_L11A_PROMOSI,
+} from '~/data/spt1771ImportSpecs'
 
 const MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
@@ -508,6 +518,8 @@ const lampiran9: LampiranDef = {
   title: 'Lampiran 9',
   parts: [{
     key: 'main',
+    // One DJP file (Daftar Penyusutan + Daftar Amortisasi) fills both registers.
+    import: IMPORT_L9,
     blocks: [
       {
         kind: 'table',
@@ -562,6 +574,7 @@ const lampiran10a: LampiranDef = {
   parts: [{
     key: 'main',
     title: 'Transaksi Hubungan Istimewa',
+    import: IMPORT_L10A,
     blocks: [{
       kind: 'table',
       key: 'transaksi',
@@ -738,6 +751,7 @@ const lampiran11a: LampiranDef = {
       key: 'i',
       tab: 'I. Biaya promosi',
       title: 'I. Daftar nominatif biaya promosi',
+      import: IMPORT_L11A_PROMOSI,
       blocks: [{
         kind: 'table',
         key: 'promosi',
@@ -760,6 +774,7 @@ const lampiran11a: LampiranDef = {
       key: 'ii',
       tab: 'II. Biaya entertainment',
       title: 'II. Daftar nominatif biaya entertainment',
+      import: IMPORT_L11A_ENTERTAINMENT,
       blocks: [{
         kind: 'table',
         key: 'entertainment',
@@ -783,6 +798,7 @@ const lampiran11a: LampiranDef = {
       key: 'iii',
       tab: 'III. Piutang yang tidak dapat ditagih',
       title: 'III. Daftar piutang yang nyata-nyata tidak dapat ditagih',
+      import: IMPORT_L11A_PIUTANG,
       blocks: [{
         kind: 'table',
         key: 'piutang',
@@ -792,7 +808,13 @@ const lampiran11a: LampiranDef = {
           text('nama', 'Nama (3)', { width: 200, required: true }),
           text('alamat', 'Alamat (4)', { width: 220 }),
           rp('plafon', 'Plafon piutang (5)'),
-          rp('tidakTertagih', 'Piutang yang nyata-nyata tidak dapat ditagih (6)'),
+          rp('tidakTertagih', 'Piutang yang nyata-nyata tidak dapat ditagih (6)', {
+            validate: (v, row) => (num(v) > num(row.plafon) ? 'Tidak boleh melebihi plafon piutang' : undefined),
+          }),
+          // DJP's import template (CIT_L11A_Uncollectible_Debt) carries these three as well.
+          code('metode', 'Metode pengurangan (7)', METODE_PENGHAPUSAN, false, { width: 180, placeholder: 'Pilih metode' }),
+          code('dokumen', 'Jenis dokumen yang disyaratkan (8)', JENIS_PEMENUHAN, false, { width: 220, placeholder: 'Pilih jenis dokumen' }),
+          text('keterangan', 'Keterangan (9)', { width: 180 }),
         ],
         totals: ['plafon', 'tidakTertagih'],
       }],
@@ -845,6 +867,7 @@ const lampiran11a: LampiranDef = {
       key: 'v',
       tab: 'V. Debitur kredit kurang lancar',
       title: 'V. Daftar debitur kredit kurang lancar',
+      import: IMPORT_L11A_DEBITUR,
       blocks: [{
         kind: 'table',
         key: 'debitur',

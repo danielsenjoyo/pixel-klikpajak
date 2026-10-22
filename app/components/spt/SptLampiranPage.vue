@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { MpBanner, MpBannerDescription, MpTab, MpTabList, MpTabs, MpText } from '@mekari/pixel3'
-import type { BlockValues, Ctx, LampiranDef, Row, SectionData } from '~/data/spt1771Engine'
+import { MpBanner, MpBannerDescription, MpButton, MpTab, MpTabList, MpTabs, MpText, toast } from '@mekari/pixel3'
+import { isRowFilled, type BlockValues, type Ctx, type LampiranDef, type LampiranPart, type Row, type SectionData } from '~/data/spt1771Engine'
+import type { ListPayload } from '~/data/spt1771Import'
 import { seedSection } from '~/data/spt1771LampiranDefs'
 
 // Renders one lampiran definition (data/spt1771LampiranDefs.ts): title, part tabs
@@ -42,6 +43,25 @@ const fullCtx = computed<Ctx>(() => ({ ...props.ctx, section: data.value }))
 const blocksOf = (part: LampiranDef['parts'][number]) => part.blocks.filter(b => !b.when || b.when(fullCtx.value))
 const rowsOf = (key: string) => data.value[key] as Row[]
 const valuesOf = (key: string) => data.value[key] as BlockValues
+
+// ── Import from a DJP template (part-level: Lampiran 9's one file fills both registers) ──
+const importPart = ref<LampiranPart | null>(null)
+const isImportOpen = computed({
+  get: () => !!importPart.value,
+  set: (open: boolean) => { if (!open) importPart.value = null },
+})
+const importCtx = computed(() => ({ npwp: props.ctx.npwp, year: props.ctx.year }))
+const filledRows = (key: string) => (Array.isArray(data.value[key]) ? (data.value[key] as Row[]).filter(isRowFilled) : [])
+
+/** Append keeps what is there (blank "Tambah baris" rows dropped); replace starts the table over. */
+function applyImport(payload: ListPayload, mode: 'append' | 'replace') {
+  data.value[payload.target] = mode === 'replace' ? payload.rows : [...filledRows(payload.target), ...payload.rows]
+  toast.notify({
+    id: `toast-${props.def.section}-imported`,
+    variant: 'success',
+    title: `${payload.rows.length} baris berhasil diimpor`,
+  })
+}
 </script>
 
 <template>
@@ -62,7 +82,19 @@ const valuesOf = (key: string) => data.value[key] as BlockValues
     </MpTabs>
 
     <section v-for="p in visibleParts" :key="`${def.section}-${p.key}`" class="spt-lampiran__part">
-      <MpText v-if="p.title" as="h3" size="h3" weight="semiBold" class="spt-lampiran__subtitle">{{ p.title }}</MpText>
+      <div v-if="p.title || (p.import && !isReadOnly)" class="spt-lampiran__part-head">
+        <MpText v-if="p.title" as="h3" size="h3" weight="semiBold" class="spt-lampiran__subtitle">{{ p.title }}</MpText>
+        <MpButton
+          v-if="p.import && !isReadOnly"
+          :id="`${def.section}-${p.key}-import`"
+          variant="secondary"
+          left-icon="upload"
+          class="spt-lampiran__import"
+          @click="importPart = p"
+        >
+          Impor data
+        </MpButton>
+      </div>
 
       <template v-for="b in blocksOf(p)" :key="b.key">
         <template v-if="data[b.kind === 'table' ? b.dataKey ?? b.key : b.key] !== undefined">
@@ -104,6 +136,16 @@ const valuesOf = (key: string) => data.value[key] as BlockValues
         </template>
       </template>
     </section>
+
+    <SptImportModal
+      v-if="importPart?.import"
+      :id="`${def.section}-import-modal`"
+      v-model:open="isImportOpen"
+      :spec="importPart.import"
+      :ctx="importCtx"
+      :existing="filledRows(importPart.import.target).length"
+      @apply="applyImport"
+    />
   </div>
 </template>
 
@@ -134,6 +176,19 @@ const valuesOf = (key: string) => data.value[key] as BlockValues
 
 .spt-lampiran__subtitle {
   max-width: 960px;
-  margin: 0 0 var(--mp-spacing-4);
+  margin: 0;
+}
+
+.spt-lampiran__part-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--mp-spacing-4);
+  margin-bottom: var(--mp-spacing-4);
+}
+
+.spt-lampiran__import {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 </style>

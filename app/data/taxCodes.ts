@@ -647,7 +647,7 @@ export const ASET_BERWUJUD_BANGUNAN: Code[] = [
   { code: '799', name: 'Aset Lainnya' },
 ]
 
-// ── Kode harta tak berwujud (Lampiran 9 III) (INTANGIBLE_ASSET, 21) ──
+// ── Kode harta tak berwujud (Lampiran 9 III) (INTANGIBLE_ASSET, 11) ──
 export const ASET_TAK_BERWUJUD: Code[] = [
   { code: '601', name: 'Paten' },
   { code: '602', name: 'Royalti' },
@@ -660,16 +660,6 @@ export const ASET_TAK_BERWUJUD: Code[] = [
   { code: '609', name: 'Hak di Lapangan Minyak dan Gas' },
   { code: '610', name: 'Hak Eksploitasi Sumber Daya Alam dan Hasil Alam Lainnya' },
   { code: '699', name: 'Harta Tidak Berwujud Lainnya' },
-  { code: 'GL', name: 'Garis Lurus' },
-  { code: 'JAT', name: 'Jumlah Angka Tahun' },
-  { code: 'JJJ', name: 'Jumlah Jam Jasa' },
-  { code: 'JSP', name: 'Jumlah Satuan Produksi' },
-  { code: 'ML', name: 'Metode Lainnya' },
-  { code: 'SM', name: 'Saldo Menurun' },
-  { code: 'SMG', name: 'Saldo Menurun Ganda' },
-  { code: 'GL', name: 'Garis Lurus' },
-  { code: 'JSP', name: 'Jumlah Satuan Produksi' },
-  { code: 'SM', name: 'Saldo Menurun' },
 ]
 
 // ── Metode penyusutan komersial (Lampiran 9) (COMMERCIAL_DEPRECIATION, 7) ──
