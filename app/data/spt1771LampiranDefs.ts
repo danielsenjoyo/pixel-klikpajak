@@ -441,8 +441,8 @@ const L9_BERWUJUD_GROUPS = [
   { value: 'hk3', label: 'C. Kelompok 3' },
   { value: 'hk4', label: 'D. Kelompok 4' },
   { value: 'hkl', label: 'E. Kelompok lain' },
-  { value: 'bp', label: 'A. Permanen', heading: 'II. Kelompok bangunan' },
-  { value: 'bt', label: 'B. Tidak permanen' },
+  { value: 'bp', label: 'A. Permanen', heading: 'II. Kelompok bangunan', option: 'Bangunan permanen' },
+  { value: 'bt', label: 'B. Tidak permanen', option: 'Bangunan tidak permanen' },
 ]
 const L9_TAK_BERWUJUD_GROUPS = [
   { value: 'tk1', label: 'A. Kelompok 1', heading: 'III. Harta tak berwujud' },
@@ -452,13 +452,13 @@ const L9_TAK_BERWUJUD_GROUPS = [
   { value: 'tkl', label: 'E. Kelompok lain' },
 ]
 
-/** Every option names its section, so "B. Kelompok 2" is never ambiguous. */
-function l9GroupOptions(groups: typeof L9_BERWUJUD_GROUPS) {
-  let heading = ''
-  return groups.map((g) => {
-    if (g.heading) heading = g.heading
-    return { value: g.value, label: `${heading} — ${g.label}` }
-  })
+/**
+ * The dropdown names the group only ("Kelompok 1"): each grid offers its own section's
+ * groups, so the section prefix and the A./B. letter just repeated the row's heading.
+ * Bangunan groups say so, since "Permanen" alone would not read as a group.
+ */
+function l9GroupOptions(groups: { value: string, label: string, option?: string }[]) {
+  return groups.map(g => ({ value: g.value, label: g.option ?? g.label.replace(/^[A-Z]\.\s*/, '') }))
 }
 
 /**

@@ -78,9 +78,12 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
     @update:model-value="onNumberText($event, false)"
   />
 
+  <!-- MpDatePicker has no `size`: its inner input group always renders md, so a month cell
+       stood taller than the sm controls beside it. `--sm` applies Pixel's own sm input tokens. -->
   <MpDatePicker
     v-else-if="type === 'date' || type === 'month' || type === 'year'"
     :id="id"
+    :class="{ 'spt-field__date--sm': size === 'sm' }"
     :model-value="asString || null"
     :type="type"
     value-type="string"
@@ -142,3 +145,13 @@ const DATE_PLACEHOLDER: Record<string, string> = { date: 'Pilih tanggal', month:
     @update:model-value="emit('update:modelValue', $event === '' ? null : $event)"
   />
 </template>
+
+<style scoped>
+/* Same tokens as Pixel's `mp-input__control--size_sm`. */
+.spt-field__date--sm :deep(.mp-input__control) {
+  height: var(--mp-sizes-7\.5);
+  padding-block: var(--mp-spacing-1);
+  border-radius: var(--mp-radii-sm);
+  font-size: var(--mp-font-sizes-sm);
+}
+</style>
