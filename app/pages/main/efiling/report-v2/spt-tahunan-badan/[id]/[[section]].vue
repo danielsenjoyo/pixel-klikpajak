@@ -28,6 +28,11 @@ import { LIST_PATH, detailPath, findSection, isLocked, masaLabel, postedAtLabel,
 // Lapor SPT Tahunan Badan — Figma "SPT-Tahunan-Badan › --> SPT":
 // page title (breadcrumb, Download petunjuk pengisian, Lapor SPT), in-page section
 // menu with checkpoints, SPT Induk / Lampiran 1 (bespoke) and Lampiran 2–14 (engine), Simpan.
+// Jurnal pull scenarios for Lampiran 1 — dev only, dropped from a production build.
+const ErpDevPanel = import.meta.dev
+  ? defineAsyncComponent(() => import('~/dev/ErpDevPanel.vue'))
+  : null
+
 definePageMeta({
   // Keep one instance across sections so the unsaved draft survives section switches.
   key: route => String(route.params.id),
@@ -39,6 +44,7 @@ const id = String(route.params.id)
 const { get, post, submit } = useSptTahunanBadan()
 // BUT status is a property of the entity, not the return — it opens Lampiran 12A/12B.
 const { company } = useSession()
+const { has: hasVersion } = usePrototypeVersion()
 const spt = computed(() => get(id))
 
 const sectionKey = computed(() => {
@@ -119,6 +125,7 @@ const indukTab = ref<IndukTab>(isIndukTab(route.query.tab) ? route.query.tab : '
 const lampiranPart = ref('')
 watch(sectionKey, () => { lampiranPart.value = '' })
 
+const nuxtApp = useNuxtApp()
 let flashTimer: ReturnType<typeof setTimeout> | undefined
 let flashed: Element | null = null
 
@@ -127,11 +134,20 @@ let flashed: Element | null = null
  * section, then scroll the control into view, focus it and flash it.
  */
 async function goToIssue(issue: Pick<Issue, 'section' | 'tab' | 'target'>) {
-  if (issue.tab) {
-    if (issue.section === 'induk') { if (isIndukTab(issue.tab)) indukTab.value = issue.tab }
-    else lampiranPart.value = issue.tab
+  if (issue.section === 'induk' && isIndukTab(issue.tab)) indukTab.value = issue.tab
+  if (sectionKey.value !== issue.section) {
+    // A route change scrolls to the top once the page settles (Nuxt's scrollBehavior, on
+    // "page:loading:end" + a frame) — wait it out so it doesn't undo the scroll below.
+    const settled = new Promise<void>((resolve) => {
+      const done = () => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      nuxtApp.hooks.hookOnce('page:loading:end', done)
+      setTimeout(resolve, 1000)
+    })
+    await navigateTo(detailPath({ id }, issue.section))
+    await settled
   }
-  if (sectionKey.value !== issue.section) await navigateTo(detailPath({ id }, issue.section))
+  // After the route change: switching section resets the part (watch above), which would undo it.
+  if (issue.tab && issue.section !== 'induk') lampiranPart.value = issue.tab
   await nextTick()
   if (!issue.target) return
   const el = document.getElementById(issue.target)
@@ -146,7 +162,8 @@ async function goToIssue(issue: Pick<Issue, 'section' | 'tab' | 'target'>) {
   flashTimer = setTimeout(() => { el.classList.remove('kp-flash'); flashed = null }, 2000)
 }
 
-const jumpToHasil = () => goToIssue({ section: 'induk', tab: 'perhitungan', target: 'induk-hasil' })
+/** Hasil in the menu → Induk › Perhitungan PPh, on the line it is read from: 17c normal, 18b pembetulan. */
+const jumpToHasil = () => goToIssue({ section: 'induk', tab: 'perhitungan', target: `induk-f${hasil.value.line}` })
 onBeforeUnmount(() => clearTimeout(flashTimer))
 
 const status = computed(() => {
@@ -377,7 +394,9 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
               <SptLampiran1
                 v-else-if="sectionKey === 'lampiran-1'"
                 v-model="draft.lampiran1"
+                v-model:part="lampiranPart"
                 :import-ctx="{ npwp: company.npwp, year: spt.year }"
+                :company="company"
                 :is-read-only="isReadOnly"
               />
               <SptLampiranPage
@@ -480,6 +499,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
         </KpBlankSlate>
       </KpStage>
     </template>
+    <component :is="ErpDevPanel" v-if="ErpDevPanel && sectionKey === 'lampiran-1' && hasVersion('27Q1')" />
   </div>
 </template>
 
