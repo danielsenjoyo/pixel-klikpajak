@@ -3,16 +3,19 @@ import { MpButton, MpIcon } from '@mekari/pixel3'
 import logo from '~/assets/images/logo-klikpajak.svg'
 
 // Fixed 56px top bar. Source: components/Pixel/Header/Bar —
-// [logo] .......... [Daftar Efin] [+ Akses cepat] [Switch app] [burger (mobile) | account]
+// [logo] [versi prototipe] .......... [Daftar Efin] [+ Akses cepat] [Switch app] [burger (mobile) | account]
 const { session } = useSession()
 const { isMobileOpen } = useSidebar()
 </script>
 
 <template>
   <header class="kp-header">
-    <NuxtLink to="/main/home" class="kp-header__logo" aria-label="Klikpajak — Dasbor">
-      <img :src="logo" alt="Klikpajak" height="40" />
-    </NuxtLink>
+    <div class="kp-header__start">
+      <NuxtLink to="/main/home" class="kp-header__logo" aria-label="Klikpajak — Dasbor">
+        <img :src="logo" alt="Klikpajak" height="40" />
+      </NuxtLink>
+      <KpVersionSwitch />
+    </div>
 
     <div class="kp-header__actions">
       <MpButton
@@ -53,6 +56,12 @@ const { isMobileOpen } = useSidebar()
   padding: var(--mp-spacing-2xs) var(--mp-spacing-6);
   border-bottom: 1px solid var(--mp-colors-border-default);
   background: var(--mp-colors-background-stage);
+}
+
+.kp-header__start {
+  display: flex;
+  align-items: center;
+  gap: var(--mp-spacing-4);
 }
 
 .kp-header__logo {

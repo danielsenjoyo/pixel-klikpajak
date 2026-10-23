@@ -13,6 +13,7 @@
  * This module sits above the engine, the lampiran definitions and the Induk, because
  * document rules need all three at runtime.
  */
+import { isProfitLoss, linesMissingCode, unmappedLines } from '~/data/coaMapping'
 import type { Ctx, FieldDef, Issue, SectionData } from '~/data/spt1771Engine'
 import { blockValues, fieldErrors, num, tableRows } from '~/data/spt1771Engine'
 import type { AttachmentCtx, IndukTotals, SptIndukData } from '~/data/spt1771Induk'
@@ -193,6 +194,8 @@ function tableFieldIssues(f: ValidationInput): Issue[] {
 
 /** Lampiran 1 kolom (9): a fiscal correction must name the rule it is made under. */
 function koreksiCodeIssues(l1: Lampiran1Data): Issue[] {
+  // Pulled from Jurnal: the code is checked per CoA instead (erpIssues), where it is entered.
+  if (l1.erp) return []
   const rows = sectorRows(l1.sektor).labaRugi
   return missingKoreksiCode(l1).map((code) => {
     const name = rows.find(r => r.kind !== 'group' && r.code === code)?.label ?? code
@@ -205,6 +208,52 @@ function koreksiCodeIssues(l1: Lampiran1Data): Issue[] {
       target: `l1a-${code}-c9`,
     })
   })
+}
+
+/**
+ * Lampiran 1 pulled from Jurnal (L1 PRD R1). An unmapped CoA would silently drop out of the
+ * roll-up, so it blocks (AC-008 "never silent"); a correction without its code blocks as on
+ * the DJP grid (AC-018); an account the pull could not read only warns (AC-004 "not blocked").
+ */
+function erpIssues(l1: Lampiran1Data): Issue[] {
+  const ws = l1.erp
+  if (!ws) return []
+  const out: Issue[] = []
+  const unmapped = unmappedLines(ws)
+  if (unmapped.length) {
+    const first = unmapped[0]!
+    const names = unmapped.slice(0, 3).map(l => l.name).join(', ') + (unmapped.length > 3 ? `, dan ${unmapped.length - 3} lainnya` : '')
+    out.push(err({
+      code: 'l1/coa-unmapped',
+      label: `L1 ${unmapped.length} akun Jurnal belum dipetakan`,
+      message: `Pilih akun DJP untuk ${names}. Akun yang belum dipetakan tidak ikut dihitung di Lampiran 1.`,
+      section: 'lampiran-1',
+      tab: isProfitLoss(first.cls) ? 'a' : 'b',
+      target: `l1-coa-item-${first.coa}`,
+    }))
+  }
+  for (const l of linesMissingCode(ws)) {
+    out.push(err({
+      code: `l1/coa-kode/${l.coa}`,
+      label: `L1 ${l.coa} kode koreksi fiskal`,
+      message: `${l.name}: pilih kode koreksi fiskal untuk nilai koreksi positif atau negatif.`,
+      section: 'lampiran-1',
+      tab: 'a',
+      target: `l1-coa-item-${l.coa}`,
+    }))
+  }
+  const missing = ws.lines.filter(l => l.isMissing && l.value === null)
+  if (missing.length) {
+    out.push(warn({
+      code: 'l1/coa-missing',
+      label: `L1 ${missing.length} akun gagal ditarik dari Jurnal`,
+      message: `${missing.map(l => l.name).join(', ')} tidak terbaca saat penarikan data. Tarik ulang atau isi nilainya secara manual.`,
+      section: 'lampiran-1',
+      tab: isProfitLoss(missing[0]!.cls) ? 'a' : 'b',
+      target: `l1-coa-item-${missing[0]!.coa}`,
+    }))
+  }
+  return out
 }
 
 /**
@@ -291,6 +340,7 @@ export function validateSpt(f: ValidationInput): Issue[] {
     ...indukIssues(f.induk, f.totals),
     ...neracaIssues(f.lampiran1),
     ...koreksiCodeIssues(f.lampiran1),
+    ...erpIssues(f.lampiran1),
     ...attachmentIssues(f),
     ...kepemilikanIssues(f),
     ...lampiranIssues(f),

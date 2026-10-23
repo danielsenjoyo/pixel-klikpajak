@@ -33,11 +33,20 @@ export interface Company {
    * holder that come with it stay read-only (brief §9 row 19b).
    */
   bankAccounts: { id: string, bank: string, nomor: string, pemilik: string }[]
+  /**
+   * Industry chosen at company setup. It defaults the Lampiran 1 sektor through the
+   * Industry → Sektor table (L1 PRD §6, `sektorFromIndustry`); the preparer can override.
+   */
+  industry: string
+  /** Books kept in Jurnal and connected — "Tarik data dari Jurnal" on Lampiran 1 (L1 PRD US-002). */
+  jurnalConnected?: boolean
 }
 
 export const companies: Company[] = [
   {
     id: 188311,
+    industry: 'Software & SaaS',
+    jurnalConnected: true,
     name: 'PT Mekari Pajak Indonesia',
     npwp: '0123456789012345',
     email: 'pajak@mekari.com',
@@ -50,6 +59,7 @@ export const companies: Company[] = [
   },
   {
     id: 188312,
+    industry: 'Restoran & Kafe',
     name: 'PT Central Perk Indonesia',
     npwp: '0234567890123456',
     email: 'finance@centralperk.co.id',
@@ -59,6 +69,7 @@ export const companies: Company[] = [
   },
   {
     id: 188313,
+    industry: 'Perdagangan Grosir',
     name: 'CV Sinar Jaya Abadi',
     npwp: '0345678901234567',
     email: 'admin@sinarjaya.co.id',
@@ -68,6 +79,7 @@ export const companies: Company[] = [
   },
   {
     id: 188314,
+    industry: 'Ekspor-Impor',
     name: 'BUT Nippon Trading Co., Ltd.',
     npwp: '0456789012345678',
     isBut: true,
@@ -78,6 +90,7 @@ export const companies: Company[] = [
   },
   {
     id: 188315,
+    industry: 'Organisasi Nirlaba',
     name: 'Yayasan Mekari Peduli',
     npwp: '0567890123456789',
     entityType: 'yayasan',
@@ -88,6 +101,8 @@ export const companies: Company[] = [
   },
   {
     id: 188316,
+    industry: 'Logistik & Pengiriman',
+    jurnalConnected: true,
     name: 'PT Garuda Logistik Nusantara',
     npwp: '0678901234567890',
     email: 'pajak@garudalogistik.co.id',

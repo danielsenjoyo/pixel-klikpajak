@@ -3,6 +3,7 @@
  * Rows mirror Figma "SPT / lampiran 1A / A" (Laporan Laba Rugi) and
  * "SPT / lampiran 1A / B" (Laporan Posisi Keuangan).
  */
+import type { ErpWorkspace } from '~/data/coaMapping'
 import { SECTOR_SCHEMAS } from '~/data/spt1771Lampiran1Sectors'
 import { SEKTOR_USAHA_DJP } from '~/data/taxCodes'
 import { n } from '~/utils/currency'
@@ -16,16 +17,22 @@ export type AccountRow =
   | { kind: 'input', code: string, label: string, variant?: 'full' | 'simple', indent?: boolean }
   | { kind: 'total', code: string, label: string, formula: Formula, strong?: boolean }
 
-export const LAMPIRAN1_COLUMNS: { key: L1Col | 'c9', label: string, computed?: boolean }[] = [
-  { key: 'c3', label: 'Nilai (komersial) (3)' },
-  { key: 'c4', label: 'Non objek pajak (4)' },
-  { key: 'c5', label: 'Dikenakan PPh Final (5)' },
-  { key: 'c6', label: 'Tidak final (6)=(3)-(4)-(5)', computed: true },
-  { key: 'c7', label: 'Koreksi fiskal positif (7)' },
-  { key: 'c8', label: 'Koreksi fiskal negatif (8)' },
-  { key: 'c9', label: 'Kode koreksi fiskal (9)' },
-  { key: 'c10', label: 'Nilai fiskal (sebelum fasilitas perpajakan) (10)', computed: true },
+/**
+ * Lampiran 1A columns as DJP's form heads them: a name, then a numbering row that carries
+ * the arithmetic of the computed columns — "(6) = (3) − (4) − (5)", "(10) = (6) + (7) − (8)".
+ */
+export const LAMPIRAN1_COLUMNS: { key: L1Col | 'c9', label: string, no: string, computed?: boolean }[] = [
+  { key: 'c3', label: 'Nilai (komersial)', no: '(3)' },
+  { key: 'c4', label: 'Non objek pajak', no: '(4)' },
+  { key: 'c5', label: 'Dikenakan PPh Final', no: '(5)' },
+  { key: 'c6', label: 'Tidak final', no: '(6) = (3) − (4) − (5)', computed: true },
+  { key: 'c7', label: 'Penyesuaian fiskal positif', no: '(7)' },
+  { key: 'c8', label: 'Penyesuaian fiskal negatif', no: '(8)' },
+  { key: 'c9', label: 'Kode penyesuaian fiskal', no: '(9)' },
+  { key: 'c10', label: 'Nilai fiskal (sebelum fasilitas perpajakan)', no: '(10) = (6) + (7) − (8)', computed: true },
 ]
+/** Expense rows flip the correction (a positive correction cuts the cost) — noted under the grid. */
+export const EXPENSE_C10_NOTE = 'Untuk akun beban (5xxx), nilai fiskal (10) = (6) − (7) + (8): koreksi positif mengurangi biaya yang boleh dibebankan.'
 
 /** Columns a total row shows (Figma); 4800 shows every numeric column. */
 export const TOTAL_COLS: L1Col[] = ['c3', 'c6', 'c10']
@@ -185,6 +192,11 @@ export interface Lampiran1Data {
   sektor: SektorUsaha
   labaRugi: Record<string, RowValues>
   posisiKeuangan: Record<string, number | null>
+  /**
+   * Set once the books are pulled from Jurnal: the per-CoA reconciliation (coaMapping.ts).
+   * While present, `labaRugi` / `posisiKeuangan` are its roll-up and are not edited directly.
+   */
+  erp?: ErpWorkspace
 }
 
 export function emptyLampiran1(): Lampiran1Data {
@@ -200,7 +212,7 @@ export function sectorRows(sektor: string): { labaRugi: AccountRow[], posisiKeua
 const isExpense = (code: string) => code.startsWith('5')
 
 /** Input-row codes under a total (unsigned), for the fiscal-correction columns. */
-function leafCodes(rows: AccountRow[], code: string, acc = new Set<string>()): Set<string> {
+export function leafCodes(rows: AccountRow[], code: string, acc = new Set<string>()): Set<string> {
   const row = rows.find(r => r.kind !== 'group' && r.code === code)
   if (row?.kind === 'input') acc.add(code)
   else if (row?.kind === 'total') row.formula.forEach(([c]) => leafCodes(rows, c, acc))

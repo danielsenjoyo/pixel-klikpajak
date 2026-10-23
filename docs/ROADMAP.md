@@ -32,7 +32,20 @@ Done so far: **boilerplate only** — shell, nav, layouts, placeholders.
   `spt1771Induk.ts`), plus Lampiran 7 kolom 9 → Lampiran 6 angka 2. Lampiran 13B IV angka 3
   is 1 - 2 (Figma says "1 + 2"; changed on review since angka 2 is already used).
 
+- Lampiran 1 from Jurnal (PRD *L1 — Fiscal Reconciliation* R1 + round-1 findings): pull the
+  trial balance, CoA → DJP mapping (lookup, class guard, bulk-set, value override, reuse across
+  years), then the fiscal correction per CoA in a spreadsheet grid (Akun Jurnal + Akun DJP frozen,
+  columns (3)–(10) inline; a year of transactions per CoA picked in a drawer with search, month
+  filter and paging) with fiscal-code prompts;
+  read-only Per akun DJP roll-up feeding the existing Lampiran 1A.
+
 ## Open on SPT Tahunan Badan
+
+- Lampiran 1 from Jurnal: mapping table, prompts and pasal citations in `coaMapping.ts` are a
+  draft (not validated against PER-11, PRD §9 items 6–8). No COGS → periodic HPP rule yet
+  (Dagang/Manufaktur), no reviewer sign-off gate (US-008), no AI suggestions (R2). Audit trail is
+  recorded (`erp.log`) but not shown. BC04 Laba Kotor formula and income-row (4)/(5) cells were
+  corrected for the Jasa demo — still pending Tax/Legal like every derived sector.
 
 - Other Lampiran 1 sectors (only "Umum" / 1A is designed).
 - Lampiran 5B drawer in Figma is a copy of Lampiran 7's; built from the 5B table instead.
