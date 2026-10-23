@@ -20,7 +20,6 @@ import type { Company } from '~/data/session'
 import type { SectionData } from '~/data/spt1771Engine'
 import { SEKTOR_USAHA } from '~/data/spt1771Lampiran1'
 import {
-  HASIL_LABEL,
   INDUK_TABS,
   LAMPIRAN_LAINNYA,
   LINK_ORIGIN,
@@ -41,9 +40,10 @@ import {
 //   RO-DJP     — identitas A, Tahun, Status SPT, rekening 19b: MpFormControl is-read-only
 //                plus a help text naming DJP as the owner. Changed in Coretax, not here.
 //   RO-signer  — J. NIK/NPWP, Nama, Jabatan: same treatment, owned by the Coretax signer.
-//   RO-computed — every "= …" line and every roll-up from a lampiran: rendered as a value
-//                with a source chip (SptAmountValue), never as an input.
-//   INPUT      — metode pembukuan, sektor, tarif, angsuran 25, STP, 17b, 18a, 19a,
+//   RO-computed — every "= …" line, every roll-up from a lampiran, and 18a off Coretax
+//                TAM: rendered as a value with a source chip (SptAmountValue), never as
+//                an input.
+//   INPUT      — metode pembukuan, sektor, tarif, angsuran 25, STP, 17b, 19a,
 //                berkas, tanggal, tanda tangan and every gating answer.
 const form = defineModel<SptIndukData>({ required: true })
 const tab = defineModel<IndukTab>('tab', { default: 'ringkasan' })
@@ -67,9 +67,6 @@ const props = defineProps<{
   lampiran: Record<string, SectionData>
 }>()
 
-/** 17c's own reading — on a pembetulan `hasil` describes 18b, so it can't label 17c. */
-const label17c = computed(() => HASIL_LABEL[props.totals.f17c > 0 ? 'kb' : props.totals.f17c < 0 ? 'lb' : 'nihil'])
-
 const tabIndex = computed({
   get: () => Math.max(0, INDUK_TABS.findIndex(t => t.key === tab.value)),
   set: (i: number) => { tab.value = INDUK_TABS[i]?.key ?? 'ringkasan' },
@@ -87,6 +84,17 @@ const mandatoryBerkas = computed(() => {
 const FROM_DJP = 'Diambil dari data DJP — ubah melalui Coretax'
 const FROM_SIGNER = 'Diambil dari penandatangan Coretax'
 const FROM_PROFILE = 'Mengikuti rekening yang dipilih pada profil Coretax'
+
+// Angka 18a under Coretax Delta 2.0 (DJP, berlaku Oktober 2025): the figure is the
+// payment actually recorded in Modul TAM — kredit pembayaran for a kurang bayar, saldo
+// debit SPT for a lebih bayar — not the KB/LB printed on the SPT being corrected. A
+// lebih bayar still waiting to be disbursed records as 0, so correcting it no longer
+// asks the WP to pay before the refund lands (the Delta 1.0 defect).
+const INFO_F18A = 'Baris ini berisi seluruh jumlah pembayaran PPh Pasal 29 dikurangi pengembalian pendahuluan kelebihan pembayaran pajak melalui SKPPKP sebelum pembetulan.'
+// Only worth saying when the line reads 0: that is the case preparers used to query,
+// because Delta 1.0 would have carried the uncashed lebih bayar forward and billed it.
+const HINT_F18A = 'Belum ada pembayaran atau restitusi yang tercatat untuk pembetulan sebelumnya.'
+const TAM_SOURCE = { label: 'pencatatan TAM Coretax' }
 
 const origin = (key: LinkedKey) => ({ label: LINK_ORIGIN[key].label, href: props.hrefFor(LINK_ORIGIN[key].section) })
 
@@ -313,19 +321,37 @@ const tarifHint = computed(() => (props.totals.is31eEligible
               <KpYesNo id="induk-f17b" v-model="form.f17b" />
               <KpCurrencyInput id="induk-f17b-amount" v-model="form.f17bAmount" :is-disabled="!form.f17b" aria-label="Jumlah pajak yang diangsur atau ditunda" />
             </SptLadderRow>
-            <!-- The return is settled on 17c, or on 18b for a pembetulan: that line is the total and carries Hasil SPT. -->
-            <SptLadderRow id="induk-f17c" no="17. c." :label="`PPh masih harus / lebih dibayar — ${label17c.toUpperCase()}`" formula="17a − 17b" :value="totals.f17c" :is-total="!isPembetulan" />
+            <SptLadderRow
+              id="induk-f17c"
+              no="17. c."
+              :label="isPembetulan ? 'PPh masih harus / lebih dibayar' : `PPh masih harus / lebih dibayar — ${hasil.label.toUpperCase()}`"
+              formula="17a − 17b"
+              :value="totals.f17c"
+              :is-total="!isPembetulan"
+            />
 
-            <SptHasilSpt v-if="!isPembetulan" :hasil="hasil" />
-
-            <template v-else>
-              <SptLadderRow no="18. a." label="PPh kurang / lebih bayar pada SPT yang dibetulkan">
-                <KpCurrencyInput id="induk-f18a" v-model="form.f18aAmount" aria-label="PPh kurang / lebih bayar pada SPT yang dibetulkan" />
-              </SptLadderRow>
-              <SptLadderRow id="induk-f18b" no="18. b." :label="`PPh kurang / lebih bayar karena pembetulan — ${hasil.label.toUpperCase()}`" formula="17a − 18a" :value="totals.f18b" is-total />
-
-              <SptHasilSpt :hasil="hasil" />
+            <template v-if="isPembetulan">
+              <SptLadderRow
+                id="induk-f18a"
+                no="18. a."
+                label="PPh kurang / lebih bayar pembetulan sebelumnya"
+                :info="INFO_F18A"
+                :source="TAM_SOURCE"
+                :value="totals.f18a"
+                :hint="totals.f18a === 0 ? HINT_F18A : undefined"
+              />
+              <SptLadderRow
+                id="induk-f18b"
+                no="18. b."
+                :label="`PPh kurang / lebih bayar karena pembetulan — ${hasil.label.toUpperCase()}`"
+                formula="17a − 18a"
+                :value="totals.f18b"
+                is-total
+              />
             </template>
+
+            <!-- Under the line it reads: 17c on a normal return, 18b once the SPT is a pembetulan. -->
+            <SptHasilSpt :hasil="hasil" />
 
             <template v-if="totals.isLebihBayar">
               <KpQuestion label="19. a. Lebih bayar pada angka 17c atau 18b mohon untuk:">

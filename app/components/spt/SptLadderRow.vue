@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MpButton, MpTag, MpText } from '@mekari/pixel3'
+import { MpButton, MpIcon, MpTag, MpText } from '@mekari/pixel3'
 import { formatRp } from '~/utils/currency'
 
 // One line of the Induk calculation ladder: DJP's line number carrying the operator
@@ -20,6 +20,8 @@ defineProps<{
   value?: number
   /** Grey note under the label — why a line is unavailable, or where it comes from. */
   hint?: string
+  /** DJP's own definition of the line, behind an info icon next to the label. */
+  info?: string
   /** Renders the line as the ladder's result. */
   isTotal?: boolean
 }>()
@@ -31,6 +33,16 @@ defineProps<{
       <MpText :id="`ladder-${no}-label`" as="p" size="body" :weight="isTotal ? 'semiBold' : 'regular'" class="spt-ladder-row__text">
         <span class="spt-ladder-row__no">{{ no }}</span>
         {{ label }}
+        <span
+          v-if="info"
+          v-tooltip="{ label: info, placement: 'top' }"
+          class="spt-ladder-row__info"
+          tabindex="0"
+          role="note"
+          :aria-label="info"
+        >
+          <MpIcon name="info" size="sm" color="icon.subtle" aria-hidden="true" />
+        </span>
       </MpText>
       <p v-if="hint" class="spt-ladder-row__hint">{{ hint }}</p>
       <div v-if="formula || source" class="spt-ladder-row__meta">
@@ -92,6 +104,19 @@ defineProps<{
 
 .spt-ladder-row__no {
   font-weight: var(--mp-font-weights-semi-bold);
+}
+
+/* Rides along in the sentence after the label, so it follows the line when it wraps. */
+.spt-ladder-row__info {
+  display: inline-flex;
+  vertical-align: text-bottom;
+  margin-left: var(--mp-spacing-1);
+  border-radius: var(--mp-radii-sm);
+  cursor: help;
+}
+.spt-ladder-row__info:focus-visible {
+  outline: none;
+  box-shadow: var(--mp-shadows-focus);
 }
 
 .spt-ladder-row__hint {

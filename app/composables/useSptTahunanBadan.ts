@@ -16,7 +16,17 @@ export function useSptTahunanBadan() {
   function create(year: number): SptTahunanBadan {
     const revisions = list.value.filter(s => s.year === year).map(s => s.revision)
     const revision = revisions.length ? Math.max(...revisions) + 1 : 0
-    const spt: SptTahunanBadan = { id: `sptb-${year}-${revision}-${Date.now()}`, year, revision, status: 'READY', ntte: null, postedAt: null }
+    // A pembetulan opened now has nothing settled yet, so TAM reads 0 until a payment or
+    // an SKPPKP refund is recorded against it; a normal return has no angka 18 at all.
+    const spt: SptTahunanBadan = {
+      id: `sptb-${year}-${revision}-${Date.now()}`,
+      year,
+      revision,
+      status: 'READY',
+      ntte: null,
+      postedAt: null,
+      tamPembetulanSebelumnya: revision === 0 ? null : 0,
+    }
     list.value = [spt, ...list.value]
     return spt
   }
