@@ -3,19 +3,25 @@
  * Source: jurnal-tax frontend
  *   pages/efiling/Report/sptTahunan/badan/List            (list, type TAHUNAN_BADAN_RP)
  *   components/templates/efiling/Report/sptTahunan/badan/List (row mapping + actions)
- * Seed rows mirror the Figma "SPT Tahunan Badan" index frame.
+ * Seed rows: one Tahun Pajak 2025 history (see sptTahunanBadanSeed).
  */
 export type SptLaporStatus = 'READY' | 'IN_PROGRESS' | 'FAILED' | 'SUBMITTED'
 
 export interface SptTahunanBadan {
   id: string
-  /** Tax year, e.g. 2023 → masa "01-12/2023". */
+  /** Tax year — the year the book year starts in, e.g. July 2025 – June 2026 → 2025. */
   year: number
+  /** First month of the book year (1–12); it runs 12 months, so it ends the month before. */
+  startMonth: number
   /** Pembetulan ke (0 = original). */
   revision: number
   status: SptLaporStatus
   /** Nomor Tanda Terima Elektronik — only once DJP accepts the report. */
   ntte: string | null
+  /** When the SPT was created (ISO date) — the list's "Tanggal pembuatan". */
+  createdAt: string
+  /** DJP's message for a failed report — the list's "Keterangan". Null otherwise. */
+  note: string | null
   /**
    * When DJP last ran Posting for this SPT (the prefill pull). Mock data here — the
    * real value arrives with IF_TXR_039's interface-tracking status.
@@ -34,21 +40,42 @@ export interface SptTahunanBadan {
 
 type BadgeType = 'announcement' | 'information' | 'warning' | 'completed' | 'critical'
 
-export const LAPOR_STATUS: Record<SptLaporStatus, { label: string, badge: BadgeType }> = {
-  READY: { label: 'Siap lapor', badge: 'information' },
-  IN_PROGRESS: { label: 'Diproses DJP', badge: 'warning' },
-  FAILED: { label: 'Gagal posting SPT', badge: 'critical' },
-  SUBMITTED: { label: 'Berhasil', badge: 'completed' },
+/**
+ * Labels and colours as SPT Masa PPN prints them: `label` in the list (source: KpPixelListContainer
+ * renderBadgeReportStatusSpt), `title` in the badge next to the Lapor SPT page title.
+ */
+export const LAPOR_STATUS: Record<SptLaporStatus, { label: string, title: string, badge: BadgeType }> = {
+  READY: { label: 'Belum dilapor', title: 'Belum dilaporkan', badge: 'announcement' },
+  IN_PROGRESS: { label: 'Diproses ke DJP', title: 'Sedang dilaporkan', badge: 'warning' },
+  FAILED: { label: 'Gagal', title: 'Gagal lapor', badge: 'critical' },
+  SUBMITTED: { label: 'Berhasil', title: 'Berhasil lapor', badge: 'completed' },
 }
 
-/** Source: statusSpt = revision === 0 ? NORMAL : NORMAL_REVISION. */
-export function statusSptLabel(spt: SptTahunanBadan) {
-  return spt.revision === 0 ? 'Normal' : 'Normal-Pembetulan'
+/**
+ * Source: statusSpt = revision === 0 ? NORMAL : NORMAL_REVISION. Printed as SPT Masa PPN
+ * prints it — "Normal" / "Pembetulan"; the pembetulan number is not known to the list.
+ */
+export function statusSptLabel(spt: Pick<SptTahunanBadan, 'revision'>) {
+  return spt.revision === 0 ? 'Normal' : 'Pembetulan'
 }
 
-/** Source: taxPeriod = `01-12/${year}`. */
-export function masaLabel(spt: Pick<SptTahunanBadan, 'year'>) {
-  return `01-12/${spt.year}`
+/** "2026-07-29" → "29/07/2026", as the SPT Masa lists print Tanggal pembuatan. */
+export function createdAtLabel(spt: Pick<SptTahunanBadan, 'createdAt'>) {
+  const [y, m, d] = spt.createdAt.slice(0, 10).split('-')
+  return `${d}/${m}/${y}`
+}
+
+/** Last month (1–12) and its year for a 12-month book year starting `startMonth` of `year`. */
+export function bookYearEnd(year: number, startMonth: number) {
+  const end = startMonth + 11
+  return { month: ((end - 1) % 12) + 1, year: end > 12 ? year + 1 : year }
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+/** Source: taxPeriod = `01-12/${year}`; a non-calendar book year reads e.g. `07-06/2025`. */
+export function masaLabel(spt: Pick<SptTahunanBadan, 'year' | 'startMonth'>) {
+  return `${pad2(spt.startMonth)}-${pad2(bookYearEnd(spt.year, spt.startMonth).month)}/${spt.year}`
 }
 
 /** Source actionDropdown: BPE only once submitted; delete while not yet with DJP. */
@@ -203,18 +230,15 @@ export function findSection(key: string): SptSection | undefined {
 }
 
 /**
- * `tamPembetulanSebelumnya` seeds the two Delta 2.0 cases DJP illustrates: a kurang bayar
- * already settled, where TAM carries the accumulated payment (2023, 2021, 2016), and a
- * lebih bayar still in restitusi, where TAM carries nothing yet and 18a reads 0 (2020, 2017).
+ * Coretax takes the annual return from Tahun Pajak 2025 (MIN_TAX_YEAR), so the seed is one
+ * 2025 history: the normal return and pembetulan 1 accepted, pembetulan 2 rejected by DJP.
+ * Only one unreported SPT may exist per year (`hasOpenSpt`), so "Lapor SPT" for 2025 is
+ * blocked until the failed pembetulan is deleted — then it creates pembetulan 3.
+ * `tamPembetulanSebelumnya`: the normal return's kurang bayar was paid, so TAM carries it
+ * into both pembetulan (Delta 2.0); the normal return has no angka 18.
  */
 export const sptTahunanBadanSeed: SptTahunanBadan[] = [
-  { id: 'sptb-2023-1', year: 2023, revision: 1, status: 'READY', ntte: null, postedAt: '2026-03-02T09:14:00', tamPembetulanSebelumnya: 1_000_000 },
-  { id: 'sptb-2022-0', year: 2022, revision: 0, status: 'READY', ntte: null, postedAt: '2026-02-18T16:40:00', tamPembetulanSebelumnya: null },
-  { id: 'sptb-2021-4', year: 2021, revision: 4, status: 'IN_PROGRESS', ntte: null, postedAt: '2025-04-21T11:05:00', tamPembetulanSebelumnya: 1_200_000 },
-  { id: 'sptb-2020-12', year: 2020, revision: 12, status: 'IN_PROGRESS', ntte: null, postedAt: '2024-04-19T08:52:00', tamPembetulanSebelumnya: 0 },
-  { id: 'sptb-2019-5', year: 2019, revision: 5, status: 'IN_PROGRESS', ntte: null, postedAt: '2023-04-20T14:30:00', tamPembetulanSebelumnya: 45_800_000 },
-  { id: 'sptb-2018-0', year: 2018, revision: 0, status: 'IN_PROGRESS', ntte: null, postedAt: null, tamPembetulanSebelumnya: null },
-  { id: 'sptb-2017-21', year: 2017, revision: 21, status: 'FAILED', ntte: null, postedAt: '2022-04-28T10:11:00', tamPembetulanSebelumnya: 0 },
-  { id: 'sptb-2016-8', year: 2016, revision: 8, status: 'FAILED', ntte: null, postedAt: null, tamPembetulanSebelumnya: 12_500_000 },
-  { id: 'sptb-2015-0', year: 2015, revision: 0, status: 'SUBMITTED', ntte: '2839276489012946', postedAt: '2021-04-15T13:22:00', tamPembetulanSebelumnya: null },
+  { id: 'sptb-2025-2', year: 2025, startMonth: 1, revision: 2, status: 'FAILED', ntte: null, createdAt: '2026-09-08', note: 'Tidak dapat menyampaikan SPT Tahunan Badan saat SPT Masa PPN Desember belum disampaikan.', postedAt: '2026-09-08T10:11:00', tamPembetulanSebelumnya: 1_000_000 },
+  { id: 'sptb-2025-1', year: 2025, startMonth: 1, revision: 1, status: 'SUBMITTED', ntte: '2839276489013107', createdAt: '2026-06-22', note: null, postedAt: '2026-06-22T14:30:00', tamPembetulanSebelumnya: 1_000_000 },
+  { id: 'sptb-2025-0', year: 2025, startMonth: 1, revision: 0, status: 'SUBMITTED', ntte: '2839276489012946', createdAt: '2026-04-14', note: null, postedAt: '2026-04-14T09:14:00', tamPembetulanSebelumnya: null },
 ]

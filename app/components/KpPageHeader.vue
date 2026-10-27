@@ -2,7 +2,8 @@
 import { MpText } from '@mekari/pixel3'
 
 // Page title bar on the surface background (Figma "Page Title"): optional
-// breadcrumb, page title on the left, page actions on the right.
+// breadcrumb, page title on the left (with an optional status badge right after it via
+// the `status` slot), page actions on the right.
 defineProps<{ title: string, breadcrumbs?: { label: string, to?: string }[] }>()
 </script>
 
@@ -16,7 +17,10 @@ defineProps<{ title: string, breadcrumbs?: { label: string, to?: string }[] }>()
           <span v-if="i < breadcrumbs.length - 1" class="kp-page-header__sep" aria-hidden="true">/</span>
         </template>
       </nav>
-      <MpText as="h1" size="h1" weight="semiBold" class="kp-page-header__title">{{ title }}</MpText>
+      <div class="kp-page-header__heading">
+        <MpText as="h1" size="h1" weight="semiBold" class="kp-page-header__title">{{ title }}</MpText>
+        <slot name="status" />
+      </div>
     </div>
     <div v-if="$slots.actions" class="kp-page-header__actions">
       <slot name="actions" />
@@ -68,6 +72,13 @@ a.kp-page-header__crumb:hover {
 
 .kp-page-header__sep {
   color: var(--mp-colors-text-secondary);
+}
+
+.kp-page-header__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mp-spacing-3);
 }
 
 .kp-page-header__title {

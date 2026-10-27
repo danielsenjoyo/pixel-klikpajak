@@ -254,6 +254,7 @@ const viewOptions = [
         </div>
       </div>
 
+      <fieldset class="kp-lock" :disabled="isReadOnly">
       <SptCoaTable
         v-if="view === 'jurnal'"
         v-model="data.erp"
@@ -271,6 +272,7 @@ const viewOptions = [
         </div>
         <SptAccountTable v-model="data" :mode="statement" :rows="tab === 1 ? rows.posisiKeuangan : rows.labaRugi" is-read-only display />
       </template>
+      </fieldset>
 
       <MpText v-if="tab !== 1" as="p" size="body-small" color="text.secondary" class="spt-l1__formula-note">{{ EXPENSE_C10_NOTE }}</MpText>
       <div v-if="tab !== 1" class="spt-l1__summary">
@@ -325,6 +327,7 @@ const viewOptions = [
         </MpTabList>
       </MpTabs>
 
+      <fieldset class="kp-lock" :disabled="isReadOnly">
       <template v-if="tab !== 1">
         <MpText as="h3" size="h3" weight="semiBold" class="spt-l1__subtitle">A. Laporan Laba Rugi</MpText>
         <SptAccountTable v-model="data" mode="laba-rugi" :rows="rows.labaRugi" :is-read-only="isReadOnly" />
@@ -349,6 +352,7 @@ const viewOptions = [
           Jumlah aset ({{ formatRp(jumlahAset) }}) belum sama dengan jumlah liabilitas dan ekuitas ({{ formatRp(jumlahPasiva) }}).
         </p>
       </template>
+      </fieldset>
 
       <SptImportModal
         id="l1-import-modal"

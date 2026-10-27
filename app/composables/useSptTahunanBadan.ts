@@ -12,8 +12,8 @@ export function useSptTahunanBadan() {
     return list.value.some(s => s.year === year && s.status !== 'SUBMITTED')
   }
 
-  /** New SPT for a year: pembetulan = one past the latest existing revision. */
-  function create(year: number): SptTahunanBadan {
+  /** New SPT for a book year: pembetulan = one past the latest existing revision. */
+  function create(year: number, startMonth: number): SptTahunanBadan {
     const revisions = list.value.filter(s => s.year === year).map(s => s.revision)
     const revision = revisions.length ? Math.max(...revisions) + 1 : 0
     // A pembetulan opened now has nothing settled yet, so TAM reads 0 until a payment or
@@ -21,9 +21,12 @@ export function useSptTahunanBadan() {
     const spt: SptTahunanBadan = {
       id: `sptb-${year}-${revision}-${Date.now()}`,
       year,
+      startMonth,
       revision,
       status: 'READY',
       ntte: null,
+      createdAt: new Date().toISOString(),
+      note: null,
       postedAt: null,
       tamPembetulanSebelumnya: revision === 0 ? null : 0,
     }
@@ -50,7 +53,7 @@ export function useSptTahunanBadan() {
     return at
   }
 
-  /** Lapor SPT → handed to DJP; the list shows "Diproses DJP". */
+  /** Lapor SPT → handed to DJP; the list shows "Diproses ke DJP". */
   function submit(id: string) {
     list.value = list.value.map(s => (s.id === id ? { ...s, status: 'IN_PROGRESS' as const } : s))
   }

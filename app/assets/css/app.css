@@ -78,3 +78,13 @@ body {
   white-space: nowrap;
   border: 0;
 }
+
+/*
+ * Read-only wrapper for a submitted SPT: a disabled <fieldset> locks every control inside it.
+ * Wrap the form content only — tab bars and view switches stay outside so a submitted SPT
+ * can still be browsed.
+ */
+/* `contents`: the wrapper adds no box, so the parent's flex/gap layout is unchanged. */
+.kp-lock {
+  display: contents;
+}

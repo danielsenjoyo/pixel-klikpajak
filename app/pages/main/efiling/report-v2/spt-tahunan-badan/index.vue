@@ -5,6 +5,7 @@ import {
   MpDatePicker,
   MpFormControl,
   MpFormErrorMessage,
+  MpFormHelpText,
   MpFormLabel,
   MpIcon,
   MpInput,
@@ -35,8 +36,10 @@ import blankSlateImage from '~/assets/images/blankslate-spt.png'
 import {
   LAPOR_STATUS,
   MIN_TAX_YEAR,
+  bookYearEnd,
   canDelete,
   canDownloadBpe,
+  createdAtLabel,
   detailPath,
   masaLabel,
   statusSptLabel,
@@ -78,17 +81,36 @@ watch(() => filtered.value.length, (n) => {
 })
 
 // ── Create (modal) ───────────────────────────────────────────────────────────
+// The user picks the first month of the periode buku; the book year runs 12 months, so the
+// last month follows from it. The tax year is the year the book year starts in.
 const isCreateOpen = ref(false)
-const createYear = ref<string | null>(null)
+const createStart = ref<string | null>(null) // "MM-YYYY"
 const createError = ref('')
 
-// Annual SPT can only be reported for a tax year that has ended, and Coretax
-// starts at MIN_TAX_YEAR.
-const lastReportableYear = new Date().getFullYear() - 1
-const disableYear = (year: number) => year > lastReportableYear || year < MIN_TAX_YEAR
+const parseStart = (v: string | null) => {
+  const m = v ? /^(\d{2})-(\d{4})$/.exec(v) : null
+  return m ? { month: Number(m[1]), year: Number(m[2]) } : null
+}
+const start = computed(() => parseStart(createStart.value))
+const endLabel = computed(() => {
+  if (!start.value) return ''
+  const end = bookYearEnd(start.value.year, start.value.month)
+  return `${String(end.month).padStart(2, '0')}-${end.year}`
+})
+
+// Annual SPT can only be reported once the book year has ended (its last month is over),
+// and Coretax starts at Tahun Pajak MIN_TAX_YEAR. Months counted as year * 12 + (month - 1).
+const now = new Date()
+const lastStartIndex = now.getFullYear() * 12 + now.getMonth() - 12
+const minStartIndex = MIN_TAX_YEAR * 12
+const disableMonth = (month0: number, year: number) => {
+  const idx = year * 12 + month0
+  return idx < minStartIndex || idx > lastStartIndex
+}
+const disableYear = (year: number) => year < MIN_TAX_YEAR || year * 12 > lastStartIndex
 
 function openCreate() {
-  createYear.value = null
+  createStart.value = null
   createError.value = ''
   isCreateOpen.value = true
 }
@@ -98,27 +120,31 @@ function closeCreate() {
 }
 
 function submitCreate() {
-  if (!createYear.value) {
-    createError.value = 'Masa pajak wajib diisi.'
+  const s = start.value
+  if (!s) {
+    createError.value = 'Periode buku wajib diisi.'
     return
   }
-  const year = Number(createYear.value)
-  if (year < MIN_TAX_YEAR) {
+  if (s.year < MIN_TAX_YEAR) {
     createError.value = `SPT hanya dapat dibuat untuk Tahun Pajak ${MIN_TAX_YEAR} dan seterusnya.`
     return
   }
-  if (hasOpenSpt(year)) {
-    createError.value = `SPT Tahunan Badan ${masaLabel({ year })} masih dalam proses. Selesaikan SPT tersebut terlebih dulu.`
+  if (s.year * 12 + s.month - 1 > lastStartIndex) {
+    createError.value = 'Periode buku belum berakhir. SPT dapat dibuat setelah bulan akhir periode buku selesai.'
     return
   }
-  const spt = create(year)
+  if (hasOpenSpt(s.year)) {
+    createError.value = `SPT Tahunan Badan Tahun Pajak ${s.year} masih dalam proses. Selesaikan SPT tersebut terlebih dulu.`
+    return
+  }
+  const spt = create(s.year, s.month)
   isCreateOpen.value = false
   toast.notify({ id: 'toast-spt-created', variant: 'success', title: 'SPT Tahunan Badan berhasil dibuat' })
   // Lapor SPT flow continues on the new SPT's form (SPT Induk).
   navigateTo(detailPath(spt))
 }
 
-watch(createYear, (v) => { if (v) createError.value = '' })
+watch(createStart, (v) => { if (v) createError.value = '' })
 
 // ── Row actions ──────────────────────────────────────────────────────────────
 const deleteTarget = ref<SptTahunanBadan | null>(null)
@@ -193,11 +219,12 @@ function viewDetail(spt: SptTahunanBadan, close: () => void) {
           <MpTable>
             <MpTableHead>
               <MpTableRow>
-                <MpTableCell scope="col">Masa/tahun pajak</MpTableCell>
-                <MpTableCell scope="col">Pembetulan ke</MpTableCell>
+                <MpTableCell scope="col">Masa pajak</MpTableCell>
+                <MpTableCell scope="col">Tanggal pembuatan</MpTableCell>
                 <MpTableCell scope="col">Status SPT</MpTableCell>
-                <MpTableCell scope="col">Status lapor</MpTableCell>
+                <MpTableCell scope="col">Status Lapor</MpTableCell>
                 <MpTableCell scope="col">NTTE</MpTableCell>
+                <MpTableCell scope="col">Keterangan</MpTableCell>
                 <MpTableCell scope="col" class="spt-table__action-col"><span class="kp-visually-hidden">Tindakan</span></MpTableCell>
               </MpTableRow>
             </MpTableHead>
@@ -206,14 +233,15 @@ function viewDetail(spt: SptTahunanBadan, close: () => void) {
                 <MpTableCell as="td" scope="row">
                   <NuxtLink :to="detailPath(spt)" class="spt-table__link">{{ masaLabel(spt) }}</NuxtLink>
                 </MpTableCell>
-                <MpTableCell as="td">{{ spt.revision }}</MpTableCell>
-                <MpTableCell as="td">
-                  <MpBadge for="tableStatus" type="announcement">{{ statusSptLabel(spt) }}</MpBadge>
-                </MpTableCell>
+                <MpTableCell as="td">{{ createdAtLabel(spt) }}</MpTableCell>
+                <MpTableCell as="td">{{ statusSptLabel(spt) }}</MpTableCell>
                 <MpTableCell as="td">
                   <MpBadge for="tableStatus" :type="LAPOR_STATUS[spt.status].badge">{{ LAPOR_STATUS[spt.status].label }}</MpBadge>
                 </MpTableCell>
                 <MpTableCell as="td">{{ spt.ntte ?? '-' }}</MpTableCell>
+                <MpTableCell as="td" class="spt-table__note-col">
+                  <span class="spt-table__note" :title="spt.note ?? undefined">{{ spt.note ?? '-' }}</span>
+                </MpTableCell>
                 <MpTableCell as="td" class="spt-table__action-col">
                   <MpPopover :id="`spt-action-${spt.id}`" placement="bottom-end" trigger="click" use-portal is-close-on-escape :is-keep-alive="false" v-slot="{ onClosePopover }">
                     <MpPopoverTrigger>
@@ -267,19 +295,34 @@ function viewDetail(spt: SptTahunanBadan, close: () => void) {
           <MpModalCloseButton />
         </MpModalHeader>
         <MpModalBody>
-          <MpFormControl id="spt-create-year-control" :is-invalid="!!createError">
-            <MpFormLabel>Masa pajak</MpFormLabel>
-            <MpDatePicker
-              id="spt-create-year"
-              v-model="createYear"
-              type="year"
-              value-type="string"
-              format="YYYY"
-              placeholder="Pilih masa pajak"
-              :disabled-year="disableYear"
-              :is-invalid="!!createError"
-              use-portal
-            />
+          <MpFormControl id="spt-create-period-control" :is-invalid="!!createError">
+            <MpFormLabel>Periode buku</MpFormLabel>
+            <div class="spt-modal__period">
+              <MpDatePicker
+                id="spt-create-start"
+                v-model="createStart"
+                type="month"
+                value-type="string"
+                format="MM-YYYY"
+                placeholder="Bulan awal"
+                :disabled-month="disableMonth"
+                :disabled-year="disableYear"
+                :is-invalid="!!createError"
+                :input-attr="{ 'aria-label': 'Bulan dan tahun awal periode buku' }"
+                use-portal
+              />
+              <span class="spt-modal__period-sep" aria-hidden="true">–</span>
+              <!-- Own control: MpFormControl stamps its id on every input inside it. -->
+              <MpFormControl id="spt-create-end" is-disabled>
+                <MpInput
+                  :model-value="endLabel"
+                  placeholder="Bulan akhir"
+                  aria-label="Bulan dan tahun akhir periode buku"
+                  is-disabled
+                />
+              </MpFormControl>
+            </div>
+            <MpFormHelpText v-if="!createError">Pilih bulan awal. Bulan akhir otomatis 12 bulan setelahnya.</MpFormHelpText>
             <MpFormErrorMessage>{{ createError }}</MpFormErrorMessage>
           </MpFormControl>
         </MpModalBody>
@@ -349,9 +392,36 @@ function viewDetail(spt: SptTahunanBadan, close: () => void) {
   text-decoration: underline;
 }
 
+/* DJP's messages can run long (stack traces): two lines, full text on hover — as SPT Masa PPN. */
+.spt-table__note-col {
+  max-width: 280px;
+}
+.spt-table__note {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal; /* MpTableCell sets nowrap */
+  word-break: break-word;
+}
+
 .spt-table__action-col {
   width: 143px;
   text-align: right;
+}
+
+.spt-modal__period {
+  display: flex;
+  align-items: center;
+  gap: var(--mp-spacing-2);
+}
+.spt-modal__period > * {
+  flex: 1;
+  min-width: 0;
+}
+.spt-modal__period > .spt-modal__period-sep {
+  flex: none;
+  color: var(--mp-colors-text-secondary);
 }
 
 .spt-modal__actions {

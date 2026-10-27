@@ -103,6 +103,8 @@ Index pages follow: `KpPageHeader` (title + breadcrumb) → `KpStage` → filter
 Form pages follow the Lapor SPT page `…/spt-tahunan-badan/[id]/[[section]].vue` (Figma › SPT):
 in-page section menu + form column (640px stacked, 880px where label/control sit side by side) + sticky Simpan, draft/save via a composable
 (`useSpt1771Form`), unsaved-changes guard, `definePageMeta({ key, sidebarPanel: 'collapsed' })`.
+A submitted SPT is read-only but still browsable: lock form content with `<fieldset class="kp-lock" :disabled>`
+inside the component, never around it — tab bars and view switches stay outside so they keep working.
 The layout adds no content padding — pages own it.
 
 Lampiran 2–14 are config, not components: add or change one in `spt1771LampiranDefs.ts`

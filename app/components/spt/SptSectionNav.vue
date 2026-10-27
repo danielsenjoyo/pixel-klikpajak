@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { MpBadge, MpIcon, MpText } from '@mekari/pixel3'
+import { MpIcon, MpText } from '@mekari/pixel3'
 import type { CheckState } from '~/data/spt1771Checkpoints'
 import type { HasilSpt } from '~/data/spt1771Induk'
 import { SPT_SECTIONS, type SptSection } from '~/data/sptTahunanBadan'
 import { formatRp } from '~/utils/currency'
 
-// In-page section menu of the Lapor SPT page (Figma "menu"): lapor status, then
+// In-page section menu of the Lapor SPT page (Figma "menu"): hasil and posting time
+// (the lapor status sits next to the page title), then
 // SPT Induk and Lampiran 1–14 with a checkpoint per section; Lampiran 10–13 expand
 // into their parts. Collapses to a 24px strip (Figma "collapse sidemenu").
 // The <aside> column stretches to the stage height (full-height divider); the menu inside is sticky.
 const props = defineProps<{
   activeKey: string
   hrefFor: (key: string) => string
-  status: { label: string, type: 'warning' | 'completed' | 'information' }
   /** When DJP last ran Posting, already formatted; null while it never has. */
   postedAt: string | null
   states: Record<string, CheckState>
@@ -75,13 +75,8 @@ function toggleGroup(s: SptSection) {
       </button>
 
       <template v-if="!isCollapsed">
-        <!-- Summary (designer feedback): status · hasil · posting, stacked, one divider before the list. -->
+        <!-- Summary (designer feedback): hasil · posting, stacked, one divider before the list. -->
         <div class="spt-nav__summary">
-          <div class="spt-nav__field">
-            <MpText as="p" size="label-small" weight="semiBold">Status lapor:</MpText>
-            <MpBadge for="additionalInformation" :type="status.type">{{ status.label }}</MpBadge>
-          </div>
-
           <!-- pixel-police-allow: ambient result — jumps to the hasil line; Pixel 3 has no nav component (rules.md → exceptions) -->
           <button
             type="button"
@@ -207,7 +202,7 @@ function toggleGroup(s: SptSection) {
   padding: var(--mp-spacing-2xs) var(--mp-spacing-4xs);
 }
 
-/* Summary block: status, hasil and posting time stacked; the one divider sits under it. */
+/* Summary block: hasil and posting time stacked; the one divider sits under it. */
 .spt-nav__summary {
   display: flex;
   flex-direction: column;
