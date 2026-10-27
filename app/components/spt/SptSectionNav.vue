@@ -75,24 +75,31 @@ function toggleGroup(s: SptSection) {
       </button>
 
       <template v-if="!isCollapsed">
-        <div class="spt-nav__status">
-          <MpText size="label-small" weight="semiBold">Status lapor:</MpText>
-          <MpBadge for="additionalInformation" :type="status.type">{{ status.label }}</MpBadge>
-        </div>
+        <!-- Summary (designer feedback): status · hasil · posting, stacked, one divider before the list. -->
+        <div class="spt-nav__summary">
+          <div class="spt-nav__field">
+            <MpText as="p" size="label-small" weight="semiBold">Status lapor:</MpText>
+            <MpBadge for="additionalInformation" :type="status.type">{{ status.label }}</MpBadge>
+          </div>
 
-        <!-- pixel-police-allow: ambient result chip — Pixel 3 has no nav component (rules.md → exceptions) -->
-        <button type="button" class="spt-nav__hasil" :class="`spt-nav__hasil--${hasil.state}`" @click="emit('jump-hasil')">
-          <MpText size="label-small" weight="semiBold">Hasil SPT (angka {{ hasil.line }})</MpText>
-          <MpText size="label" weight="semiBold" class="spt-nav__hasil-amount" :class="{ 'spt-nav__hasil-amount--estimasi': !hasil.isFinal }">
-            {{ hasil.state === 'nihil' ? hasil.label : `${hasil.label} ${formatRp(hasil.amount)}` }}
-          </MpText>
-          <MpText size="label-small" color="text.secondary">{{ hasil.isFinal ? 'final' : 'estimasi sementara' }}</MpText>
-        </button>
+          <!-- pixel-police-allow: ambient result — jumps to the hasil line; Pixel 3 has no nav component (rules.md → exceptions) -->
+          <button
+            type="button"
+            class="spt-nav__field spt-nav__hasil"
+            :aria-label="`${hasil.label}${hasil.state === 'nihil' ? '' : ` ${formatRp(hasil.amount)}`}, ${hasil.isFinal ? 'final' : 'estimasi sementara'} — lihat angka ${hasil.line}`"
+            @click="emit('jump-hasil')"
+          >
+            <MpText as="p" size="label-small" weight="semiBold">{{ hasil.label }} (angka {{ hasil.line }})</MpText>
+            <MpText v-if="hasil.state !== 'nihil'" as="p" size="body" weight="semiBold" class="spt-nav__hasil-amount">
+              {{ formatRp(hasil.amount) }}
+            </MpText>
+            <MpText as="p" size="label-small" color="text.secondary">{{ hasil.isFinal ? 'final' : 'estimasi sementara' }}</MpText>
+          </button>
 
-        <!-- Label and timestamp on their own lines, as SPT Masa PPN prints it. -->
-        <div class="spt-nav__posted">
-          <MpText as="p" size="label-small" color="text.secondary" weight="semiBold">Waktu posting terakhir:</MpText>
-          <MpText as="p" size="label-small" color="text.secondary">{{ postedAt ?? 'Belum ada' }}</MpText>
+          <div class="spt-nav__field">
+            <MpText as="p" size="label-small" weight="semiBold">Waktu posting terakhir</MpText>
+            <MpText as="p" size="label-small" color="text.secondary">{{ postedAt ?? 'Belum ada' }}</MpText>
+          </div>
         </div>
 
         <ul class="spt-nav__list">
@@ -200,15 +207,23 @@ function toggleGroup(s: SptSection) {
   padding: var(--mp-spacing-2xs) var(--mp-spacing-4xs);
 }
 
-.spt-nav__status {
+/* Summary block: status, hasil and posting time stacked; the one divider sits under it. */
+.spt-nav__summary {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: var(--mp-spacing-2);
+  gap: var(--mp-spacing-4);
   padding: var(--mp-spacing-4) 0;
   border-bottom: 1px solid var(--mp-colors-border-default);
 }
-
+.spt-nav__field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--mp-spacing-1);
+}
+.spt-nav__field p {
+  margin: 0;
+}
 
 .spt-nav__list {
   display: flex;
@@ -281,56 +296,23 @@ function toggleGroup(s: SptSection) {
   background: var(--mp-colors-background-brand-bold);
 }
 
-/* Ambient result chip (brief §4.2): visible on every section, click jumps to 17c. */
+/* Hasil reads as plain text; it is a button only so it can jump to the hasil line. */
 .spt-nav__hasil {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--mp-spacing-1);
-  width: 100%;
-  margin-top: var(--mp-spacing-4);
-  padding: var(--mp-spacing-3);
-  border: 1px solid var(--mp-colors-border-default);
-  border-left: 3px solid var(--mp-colors-border-default);
-  border-radius: var(--mp-radii-md);
+  padding: 0;
+  border: 0;
+  border-radius: var(--mp-radii-sm);
   background: transparent;
+  color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.spt-nav__hasil:hover {
-  background: var(--mp-colors-background-neutral-subtle);
+.spt-nav__hasil:hover .spt-nav__hasil-amount {
+  color: var(--mp-colors-text-selected);
 }
 .spt-nav__hasil:focus-visible {
   outline: none;
   box-shadow: var(--mp-shadows-focus);
-}
-.spt-nav__hasil--kb {
-  border-left-color: var(--mp-colors-background-warning-bold);
-}
-.spt-nav__hasil--lb {
-  border-left-color: var(--mp-colors-background-information-bold);
-}
-.spt-nav__hasil--nihil {
-  border-left-color: var(--mp-colors-background-success-bold);
-}
-
-.spt-nav__hasil-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--mp-spacing-2);
-}
-
-.spt-nav__posted {
-  margin: var(--mp-spacing-2) 0 0;
-}
-.spt-nav__posted p {
-  margin: 0;
-}
-
-.spt-nav__hasil-amount--estimasi {
-  border-bottom: 1px dashed var(--mp-colors-border-default);
 }
 
 @media (max-width: 991px) {
