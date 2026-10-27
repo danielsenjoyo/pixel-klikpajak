@@ -30,9 +30,16 @@ import {
   type ImportSpec,
 } from '~/data/spt1771Import'
 import {
+  GRAND_TOTAL_CODE,
+  GRAND_TOTAL_COLS,
   SEKTOR_USAHA,
+  TOTAL_COLS,
   labaRugiValue,
+  leafCodes,
+  posisiKeuanganValue,
   sectorRows,
+  type AccountRow,
+  type L1Col,
   type Lampiran1Data,
   type RowValues,
 } from '~/data/spt1771Lampiran1'
@@ -52,7 +59,7 @@ import {
   PENYUSUTAN_FISKAL,
   PENYUSUTAN_KOMERSIAL,
 } from '~/data/taxCodes'
-import type { Cell, SheetSpec } from '~/utils/xlsx'
+import type { Cell, Formula, SheetSpec, WriteCell } from '~/utils/xlsx'
 
 const num = (v: unknown) => (typeof v === 'number' ? v : 0)
 
@@ -299,8 +306,6 @@ const isAccountHeader = (r: Cell[] | undefined) => norm(r?.[0]) === 'kode akun' 
 export function lampiran1Import(data: Lampiran1Data): ImportSpec<L1Payload> {
   const sektor = SEKTOR_USAHA.find(s => s.value === data.sektor) ?? SEKTOR_USAHA[0]!
   const schema = sectorRows(data.sektor)
-  const lrInputs = schema.labaRugi.filter(r => r.kind === 'input')
-  const pkInputs = schema.posisiKeuangan.filter(r => r.kind === 'input')
   const lrByCode = new Map(schema.labaRugi.filter(r => r.kind !== 'group').map(r => [r.code, r]))
   const pkByCode = new Map(schema.posisiKeuangan.filter(r => r.kind !== 'group').map(r => [r.code, r]))
 
@@ -314,31 +319,69 @@ export function lampiran1Import(data: Lampiran1Data): ImportSpec<L1Payload> {
     // Prefilled with what Lampiran 1 already holds, so the file round-trips: download,
     // adjust in Excel, import back.
     template(ctx) {
-      const lr: Cell[][] = [...preambleRows(ctx), [], LR_COLUMNS.map(c => c.header)]
-      for (const r of lrInputs) {
-        const v = data.labaRugi[r.code] ?? {}
-        lr.push([r.code, r.label, v.c3 ?? null, v.c4 ?? null, v.c5 ?? null, labaRugiValue(data, r.code, 'c6'), v.c7 ?? null, v.c8 ?? null, v.c9 || null, labaRugiValue(data, r.code, 'c10')])
+      // Every DJP row in sheet order, inputs and totals, with the arithmetic as live Excel
+      // formulas — (6) and (10) per account, every subtotal from its rows — so the sheet
+      // recalculates as the preparer types, like DJP's own template. Cached values are the
+      // app's own, so the file reads right even where nothing recalculates.
+      const LR_COL: Record<L1Col, string> = { c3: 'C', c4: 'D', c5: 'E', c6: 'F', c7: 'G', c8: 'H', c10: 'J' }
+      const signed = (col: string, terms: [string, 1 | -1][], rowOf: Map<string, number>) =>
+        terms.map(([code, sign], i) => `${sign < 0 ? '-' : i ? '+' : ''}${col}${rowOf.get(code)}`).join('')
+
+      const lr: WriteCell[][] = [...preambleRows(ctx), [], LR_COLUMNS.map(c => c.header)]
+      const lrBold = [lr.length - 1]
+      const lrRows = schema.labaRugi.filter(r => r.kind !== 'group')
+      const lrRowOf = new Map(lrRows.map((r, i) => [r.code, lr.length + i + 1]))
+      for (const r of lrRows) {
+        const x = lrRowOf.get(r.code)!
+        const val = (col: L1Col): Formula['v'] => labaRugiValue(data, r.code, col)
+        if (r.kind === 'input') {
+          const v = data.labaRugi[r.code] ?? {}
+          // Expense rows (5xxx): a positive correction cuts the cost — same sign rule as the app.
+          const c10 = r.code.startsWith('5') ? `F${x}-G${x}+H${x}` : `F${x}+G${x}-H${x}`
+          lr.push([r.code, r.label, v.c3 ?? null, v.c4 ?? null, v.c5 ?? null, { f: `C${x}-D${x}-E${x}`, v: val('c6') }, v.c7 ?? null, v.c8 ?? null, v.c9 || null, { f: c10, v: val('c10') }])
+          continue
+        }
+        const shown = r.code === GRAND_TOTAL_CODE ? GRAND_TOTAL_COLS : TOTAL_COLS
+        const leaves = [...leafCodes(schema.labaRugi, r.code)]
+        const cell = (col: L1Col): WriteCell => {
+          if (!shown.includes(col)) return null
+          const f = col === 'c7' || col === 'c8'
+            ? leaves.map(c => `${LR_COL[col]}${lrRowOf.get(c)}`).join('+')
+            : signed(LR_COL[col], r.formula, lrRowOf)
+          return { f, v: val(col) }
+        }
+        lrBold.push(lr.length)
+        lr.push([r.code, r.label, cell('c3'), cell('c4'), cell('c5'), cell('c6'), cell('c7'), cell('c8'), null, cell('c10')])
       }
-      const pk = (filter: (code: string) => boolean): Cell[][] => [
-        ...preambleRows(ctx),
-        [],
-        PK_COLUMNS,
-        ...pkInputs.filter(r => filter(r.code)).map(r => [r.code, r.label, data.posisiKeuangan[r.code] ?? null] as Cell[]),
-      ]
+
+      const pk = (filter: (code: string) => boolean): { rows: WriteCell[][], bold: number[] } => {
+        const rows: WriteCell[][] = [...preambleRows(ctx), [], PK_COLUMNS]
+        const bold = [rows.length - 1]
+        const list = schema.posisiKeuangan.filter(r => r.kind !== 'group' && filter(r.code)) as Exclude<AccountRow, { kind: 'group' }>[]
+        const rowOf = new Map(list.map((r, i) => [r.code, rows.length + i + 1]))
+        for (const r of list) {
+          if (r.kind === 'input') { rows.push([r.code, r.label, data.posisiKeuangan[r.code] ?? null]); continue }
+          bold.push(rows.length)
+          rows.push([r.code, r.label, { f: signed('C', r.formula, rowOf), v: posisiKeuanganValue(data, r.code) }])
+        }
+        return { rows, bold }
+      }
+      const aset = pk(isAset)
+      const liab = pk(c => !isAset(c))
       const guide: Cell[][] = [
         ['Kolom pada excel', 'Petunjuk pengisian', 'Validasi'],
         ['NPWP SPT', 'Diisi dengan NPWP Pelapor SPT', '16 digit angka NPWP sesuai SPT yang dilaporkan'],
         ['Tahun Pajak', 'Diisi dengan tahun pajak SPT', '4 digit angka sesuai tahun pajak SPT yang dilaporkan'],
-        ['Kode Akun', `Kode akun Lampiran ${sektor.lampiran}. Akun jumlah tidak diisi — dihitung otomatis dari rinciannya.`, `sesuai daftar akun Lampiran ${sektor.lampiran}`],
+        ['Kode Akun', `Kode akun Lampiran ${sektor.lampiran}. Baris akun jumlah (tebal) berisi rumus dan dihitung otomatis dari rinciannya — tidak perlu diisi, dan diabaikan saat impor.`, `sesuai daftar akun Lampiran ${sektor.lampiran}`],
         ['Nama Akun', 'Hanya sebagai panduan; tidak dibaca saat impor.', ''],
         ['NILAI (KOMERSIAL)', 'Nilai menurut laporan keuangan komersial', 'angka positif'],
         ['NON OBJEK PAJAK', 'Bagian nilai yang bukan objek pajak (hanya akun penghasilan)', 'angka positif'],
         ['DIKENAKAN PPh FINAL', 'Bagian nilai yang dikenakan PPh final (hanya akun penghasilan)', 'angka positif'],
-        ['TIDAK FINAL', 'Dihitung otomatis: (3) - (4) - (5). Diabaikan saat impor.', ''],
+        ['TIDAK FINAL', 'Rumus otomatis: (6) = (3) - (4) - (5). Diabaikan saat impor.', ''],
         ['PENYESUAIAN FISKAL POSITIF', 'Nilai penyesuaian fiskal positif', 'angka positif'],
         ['PENYESUAIAN FISKAL NEGATIF', 'Nilai penyesuaian fiskal negatif', 'angka positif'],
         ['KODE PENYESUAIAN FISKAL', 'Kode penyesuaian fiskal sesuai sheet Ref', 'wajib diisi jika ada penyesuaian fiskal'],
-        ['NILAI FISKAL (Sebelum Fasilitas Perpajakan)', 'Dihitung otomatis. Diabaikan saat impor.', ''],
+        ['NILAI FISKAL (Sebelum Fasilitas Perpajakan)', 'Rumus otomatis: (10) = (6) + (7) - (8); untuk akun beban (5xxx) (10) = (6) - (7) + (8). Diabaikan saat impor.', ''],
         ['Nilai (sheet Aset / Liabilitas)', 'Saldo akun pada akhir tahun buku', 'angka positif'],
         [],
         [RUPIAH_HINT],
@@ -346,9 +389,9 @@ export function lampiran1Import(data: Lampiran1Data): ImportSpec<L1Payload> {
       const lrCols = [{ width: 12, text: true }, { width: 48 }, ...Array.from({ length: 6 }, () => ({ width: 22 })), { width: 22, text: true }, { width: 22 }]
       const pkCols = [{ width: 12, text: true }, { width: 64 }, { width: 22 }]
       return [
-        { name: 'Laba Rugi', rows: lr, boldRows: [3], cols: lrCols },
-        { name: 'Aset', rows: pk(isAset), boldRows: [3], cols: pkCols },
-        { name: 'Liabilitas', rows: pk(c => !isAset(c)), boldRows: [3], cols: pkCols },
+        { name: 'Laba Rugi', rows: lr, boldRows: lrBold, cols: lrCols },
+        { name: 'Aset', rows: aset.rows, boldRows: aset.bold, cols: pkCols },
+        { name: 'Liabilitas', rows: liab.rows, boldRows: liab.bold, cols: pkCols },
         { name: 'Petunjuk Pengisian', rows: guide, boldRows: [0], cols: [{ width: 36 }, { width: 80 }, { width: 44 }] },
         { name: 'Ref', rows: [['Kode', 'Deskripsi'], ...KODE_KOREKSI_FISKAL.map(k => [k.code, k.name] as Cell[])], boldRows: [0], cols: [{ width: 12, text: true }, { width: 110 }] },
       ] satisfies SheetSpec[]
@@ -395,7 +438,8 @@ export function lampiran1Import(data: Lampiran1Data): ImportSpec<L1Payload> {
               reject(pkByCode.has(code) ? `Akun ${code} adalah akun posisi keuangan — isi di sheet Aset atau Liabilitas` : `Kode akun ${code} tidak ada di Lampiran ${sektor.lampiran}`)
               continue
             }
-            if (row.kind !== 'input') { reject(`Akun ${code} (${row.label}) adalah akun jumlah dan dihitung otomatis — isi akun rinciannya`); continue }
+            // Totals carry formulas in the template and are recomputed here — skipped, not rejected.
+            if (row.kind !== 'input') continue
             const values: RowValues = {}
             let bad: string | undefined
             LR_COLUMNS.forEach((c, ci) => {
@@ -427,7 +471,7 @@ export function lampiran1Import(data: Lampiran1Data): ImportSpec<L1Payload> {
               reject(lrByCode.has(code) ? `Akun ${code} adalah akun laba rugi — isi di sheet Laba Rugi` : `Kode akun ${code} tidak ada di Lampiran ${sektor.lampiran}`)
               continue
             }
-            if (row.kind !== 'input') { reject(`Akun ${code} (${row.label}) adalah akun jumlah dan dihitung otomatis — isi akun rinciannya`); continue }
+            if (row.kind !== 'input') continue
             const a = cellAmount(r[idx[2]!])
             if (a.error) { reject(`Nilai ${a.error}`); continue }
             if (a.value === null) continue

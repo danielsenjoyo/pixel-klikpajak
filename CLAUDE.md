@@ -66,6 +66,19 @@ app/
   data/taxCodes.ts          mock reference lists for lampiran selects (negara, mata uang, objek pajak…)
   data/spt1771Import.ts     import engine: template builder + parser for DJP's .xlsx/.csv templates
                             (NPWP SPT / Tahun Pajak check, codes matched without leading zeros, row rejects)
+  data/jurnalErp.ts         mock Jurnal books for Lampiran 1: trial balance per CoA (Jasa/SaaS seed, balances
+                            by construction), transactions behind nominatif accounts, pullJurnal(ok|partial|error)
+  data/coaMapping.ts        Lampiran 1 per-CoA reconciliation (L1 PRD R1 + round-1): INDUSTRY_SEKTOR,
+                            COA_DJP_LOOKUP, FISCAL_PROMPT (Layer 1 config), class-guarded mapping, rollUp() → DJP L1A
+  components/spt/l1/*       Jurnal workspace: SptErpSourceCard, SptCoaTable (spreadsheet grid, one compact row per
+                            CoA: Akun Jurnal + Akun DJP frozen, (3)–(10) inline, scrolls sideways; bulk-set, value
+                            override), SptCoaTransactionsDrawer (a year of transactions per CoA: search, month,
+                            paging, select-all-filtered → fills (4)/(5)/(7)/(8) + code); "Per akun DJP" =
+                            SptAccountTable `display` (full L1A)
+  data/versions.ts          prototype versions (26Q4 default, 27Q1 …); KpVersionSwitch in the header picks one
+  composables/usePrototypeVersion  current version (?v= link > localStorage > default); `has('27Q1')` gates a
+                            feature; switching reloads so in-memory drafts never cross versions
+  composables/useJurnalErp  connection + dev scenario; confirmed CoA→DJP mapping per company+sektor (reused yearly)
   data/spt1771ImportSpecs.ts  one spec per DJP template (1-pager SPT Badan (2) items 6–12): L1 laporan
                             keuangan (per sektor), L9, L10A, L11A I/II/III/V — headers verbatim from DJP
   utils/xlsx.ts             zero-dependency .xlsx read (DecompressionStream) / write (stored zip)
@@ -77,6 +90,7 @@ app/
   data/navigation.ts        sidebar tree + active-module / active-leaf helpers
   data/session.ts           mock user-setting payload (company, NPWP, flags)
   pages/[...slug].vue       catch-all → KpNotPorted
+  dev/ErpDevPanel.vue       Jurnal pull scenario (ok / partial / error / not connected), dev only, same pattern
   dev/QuotaDevPanel.vue     scenario controls, dev only; OUTSIDE components/ so Nuxt does not
                             auto-import it — the page loads it behind `import.meta.dev`, so it
                             is dropped from a production build rather than merely hidden
@@ -101,6 +115,16 @@ Lampiran amounts that fill SPT Induk go through `lampiranLinks()` → `computeIn
 means "lampiran empty, keep the manual entry"; the Induk field then shows `SptLinkedAmount`
 read-only with its `LINK_SOURCE` hint. Values from another lampiran use `FormItem.linked`
 (reads `ctx.lampiran`).
+
+New product surface ships behind a prototype version: add it to `VERSIONS` and gate it with
+`usePrototypeVersion().has('<id>')`; the default (26Q4) stays the running release.
+
+Lampiran 1 has two ways in (Jurnal only from version 27Q1). Books connected to Jurnal (`Company.jurnalConnected`) → "Tarik data dari
+Jurnal" stores a per-CoA workspace in `Lampiran1Data.erp`; `rollUp()` writes it into `labaRugi` /
+`posisiKeuangan`, so Induk D.4, L11B and validation read it like a typed grid — never edit those two
+directly while `erp` exists. Mapping rules (lookup, class guard, prompts) live in `coaMapping.ts`, not in
+components; an unmapped CoA blocks (it would drop out of the roll-up silently). Not connected → the DJP
+grid + import, unchanged.
 
 Manajemen kuota (`/v2/main/setting/quota-management`) is the one screen built from a PRD
 rather than ported: `KpPageHeader` → `KpStage` → banner stack → summary cards → history table.
@@ -128,6 +152,9 @@ so every nav link resolves and a ported page simply replaces the placeholder.
    `MpBanner` reads its default slot once in `setup()` and caches the vnodes, so a mounted
    banner keeps its original variant and copy when props change — give it a `:key` that
    changes with the state.
+   `MpModal` / `MpDrawer` open when `is-open` turns true but do NOT close when it turns false —
+   a prop-closed one stays open inside and ignores the next open. Mount it per open instead
+   (`v-if` + `:key`); unmounting resets it.
    `MpInput is-clearable` emits `undefined` on clear — bind `:model-value` and coerce
    (`@update:model-value="q = $event ?? ''"`) so string methods don't throw.
    Inputs in table cells have no `<label>`: pass `aria-label` (`KpCurrencyInput` / `SptField`

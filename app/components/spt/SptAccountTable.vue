@@ -19,7 +19,13 @@ import { formatRp } from '~/utils/currency'
 // Lampiran 1 account table (Figma "table / lampiran 1a / A|B").
 // laba-rugi: 10 columns; (6)=(3)-(4)-(5) and (10)=(6)+(7)-(8) are computed per row.
 // posisi-keuangan: one "Nilai (3)" column. Total rows compute from their formula.
-const props = defineProps<{ mode: 'laba-rugi' | 'posisi-keuangan', rows: AccountRow[], isReadOnly?: boolean }>()
+const props = defineProps<{
+  mode: 'laba-rugi' | 'posisi-keuangan'
+  rows: AccountRow[]
+  isReadOnly?: boolean
+  /** Print every cell as text — the Lampiran 1A rolled up from Jurnal ("Per akun DJP"), not a form. */
+  display?: boolean
+}>()
 const data = defineModel<Lampiran1Data>({ required: true })
 
 const numericCols = LAMPIRAN1_COLUMNS
@@ -52,6 +58,8 @@ const needsKoreksiCode = computed(() => new Set(missingKoreksiCode(data.value)))
 
 function showTotal(row: AccountRow, col: L1Col | 'c9') {
   if (col === 'c9') return false
+  // The read-out (Per akun DJP) runs every column on every subtotal, as DJP's sheet does.
+  if (props.display) return true
   return (row.kind === 'total' && row.code === GRAND_TOTAL_CODE ? GRAND_TOTAL_COLS : TOTAL_COLS).includes(col)
 }
 </script>
@@ -61,12 +69,21 @@ function showTotal(row: AccountRow, col: L1Col | 'c9') {
     <MpTable :is-hoverable="false">
       <MpTableHead>
         <MpTableRow>
-          <MpTableCell scope="col" :class="['spt-account-table__code', freeze1]">Kode akun (1)</MpTableCell>
-          <MpTableCell scope="col" :class="['spt-account-table__name', freeze2]">Nama akun (2)</MpTableCell>
+          <MpTableCell scope="col" :class="['spt-account-table__code', freeze1]">Kode akun</MpTableCell>
+          <MpTableCell scope="col" :class="['spt-account-table__name', freeze2]">Nama akun</MpTableCell>
           <template v-if="mode === 'laba-rugi'">
             <MpTableCell v-for="c in numericCols" :key="c.key" scope="col" class="spt-account-table__num">{{ c.label }}</MpTableCell>
           </template>
-          <MpTableCell v-else scope="col" class="spt-account-table__num spt-account-table__num--wide">Nilai (3)</MpTableCell>
+          <MpTableCell v-else scope="col" class="spt-account-table__num spt-account-table__num--wide">Nilai</MpTableCell>
+        </MpTableRow>
+        <!-- DJP's numbering row, with the arithmetic of the computed columns. -->
+        <MpTableRow class="spt-account-table__no">
+          <MpTableCell scope="col" :class="freeze1">(1)</MpTableCell>
+          <MpTableCell scope="col" :class="freeze2">(2)</MpTableCell>
+          <template v-if="mode === 'laba-rugi'">
+            <MpTableCell v-for="c in numericCols" :key="c.key" scope="col">{{ c.no }}</MpTableCell>
+          </template>
+          <MpTableCell v-else scope="col">(3)</MpTableCell>
         </MpTableRow>
       </MpTableHead>
       <MpTableBody>
@@ -83,7 +100,14 @@ function showTotal(row: AccountRow, col: L1Col | 'c9') {
             <MpTableCell as="td" :class="[freeze1, { 'spt-account-table__strong': row.kind === 'total' }]">{{ row.code }}</MpTableCell>
             <MpTableCell as="td" :class="[freeze2, { 'spt-account-table__strong': row.kind === 'total', 'spt-account-table__indent': row.kind === 'input' && row.indent }]">{{ row.label }}</MpTableCell>
             <MpTableCell v-for="c in numericCols" :key="c.key" as="td" class="spt-account-table__num">
-              <template v-if="row.kind === 'input'">
+              <template v-if="row.kind === 'input' && display">
+                <!-- A rolled-up row may carry several codes ("FPO-05, FPO-06"). -->
+                <span v-if="c.key === 'c9'" class="spt-account-table__text">{{ cell(row.code, 'c9') || '-' }}</span>
+                <span v-else-if="isEditable(row, c.key) || c.computed" class="spt-account-table__amount">
+                  {{ formatRp(labaRugiValue(data, row.code, c.key as L1Col)) }}
+                </span>
+              </template>
+              <template v-else-if="row.kind === 'input'">
                 <MpSelect
                   v-if="c.key === 'c9'"
                   :id="`l1a-${row.code}-c9`"
@@ -130,8 +154,9 @@ function showTotal(row: AccountRow, col: L1Col | 'c9') {
             <MpTableCell as="td" :class="[freeze1, { 'spt-account-table__strong': row.kind === 'total' }]">{{ row.code }}</MpTableCell>
             <MpTableCell as="td" :class="[freeze2, { 'spt-account-table__strong': row.kind === 'total', 'spt-account-table__indent': row.kind === 'input' && row.indent }]">{{ row.label }}</MpTableCell>
             <MpTableCell as="td" class="spt-account-table__num spt-account-table__num--wide">
+              <span v-if="row.kind === 'input' && display" class="spt-account-table__amount">{{ formatRp(posisiKeuanganValue(data, row.code)) }}</span>
               <KpCurrencyInput
-                v-if="row.kind === 'input'"
+                v-else-if="row.kind === 'input'"
                 :id="`l1b-${row.code}`"
                 v-model="data.posisiKeuangan[row.code]"
                 :aria-label="row.label"
@@ -203,6 +228,19 @@ thead .spt-account-table__freeze-2 {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+.spt-account-table__no :deep(th),
+.spt-account-table__no :deep(td) {
+  color: var(--mp-colors-text-secondary);
+  font-size: var(--mp-font-sizes-sm);
+  font-weight: var(--mp-font-weights-regular);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.spt-account-table__text {
+  white-space: nowrap;
 }
 
 .spt-account-table__strong {

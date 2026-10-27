@@ -6,15 +6,25 @@
  * No dependency: an .xlsx is a zip of XML parts. Reading inflates entries with the
  * browser's DecompressionStream; writing stores them uncompressed (still a valid zip,
  * and template files are tiny). Only what the templates need is supported — strings,
- * numbers, booleans, a bold style, text-formatted columns, column widths. Formulas are
- * read by their cached value; dates arrive as Excel serial numbers (see `excelSerialToDmy`).
+ * numbers, booleans, formulas, a bold style, text-formatted columns, column widths. Formulas
+ * are read by their cached value; dates arrive as Excel serial numbers (see `excelSerialToDmy`).
  */
 
 export type Cell = string | number | boolean | null
 export interface Sheet { name: string, rows: Cell[][] }
 
+/**
+ * A formula cell for `writeXlsx`, e.g. `{ f: 'C8-D8-E8', v: 1200 }` — no leading "=".
+ * `v` is the cached result, so viewers that do not recalculate still show the number;
+ * Excel recalculates on open anyway (`fullCalcOnLoad`).
+ */
+export interface Formula { f: string, v?: number | null }
+export type WriteCell = Cell | Formula
+
 /** What `writeXlsx` takes per sheet. */
-export interface SheetSpec extends Sheet {
+export interface SheetSpec {
+  name: string
+  rows: WriteCell[][]
   /** Width (characters) and text format per column; text keeps leading zeros (NPWP, 0401). */
   cols?: { width?: number, text?: boolean }[]
   /** 0-based row indexes rendered bold (headers). */
@@ -210,6 +220,7 @@ function sheetXml(s: SheetSpec) {
       const ref = `${colName(ci)}${ri + 1}`
       const style = (bold.has(ri) ? 1 : 0) + (s.cols?.[ci]?.text ? 2 : 0)
       const st = style ? ` s="${style}"` : ''
+      if (typeof v === 'object') return `<c r="${ref}"${st}><f>${esc(v.f)}</f>${v.v === null || v.v === undefined ? '' : `<v>${v.v}</v>`}</c>`
       if (typeof v === 'number') return `<c r="${ref}"${st}><v>${v}</v></c>`
       if (typeof v === 'boolean') return `<c r="${ref}"${st} t="b"><v>${v ? 1 : 0}</v></c>`
       return `<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${esc(v)}</t></is></c>`
@@ -227,7 +238,7 @@ export function writeXlsx(sheets: SheetSpec[]): Blob {
     { name: '_rels/.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
     { name: 'xl/workbook.xml', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${esc(s.name.slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets></workbook>` },
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>${sheets.map((s, i) => `<sheet name="${esc(s.name.slice(0, 31))}" sheetId="${i + 1}" r:id="rId${i + 1}"/>`).join('')}</sheets><calcPr calcId="0" fullCalcOnLoad="1"/></workbook>` },
     { name: 'xl/_rels/workbook.xml.rels', text: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, i) => `<Relationship Id="rId${i + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
     { name: 'xl/styles.xml', text: STYLES },

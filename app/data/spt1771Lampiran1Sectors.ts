@@ -277,11 +277,13 @@ const schemaBC03: SectorSchema = {
 const schemaBC04: SectorSchema = {
   labaRugi: [
     { kind: 'group', label: 'Pendapatan:' },
-    { kind: 'input', code: '4021', label: 'Pendapatan Jasa' },
+    // Income rows open (4)/(5) as BC01's do; Laba Kotor nets the adjustment and Biaya Pokok
+    // Jasa off the revenue (the derived formula added them). Both pending Tax/Legal like the rest.
+    { kind: 'input', code: '4021', label: 'Pendapatan Jasa', variant: 'full' },
     { kind: 'input', code: '4013', label: 'Penyesuaian Penjualan' },
     { kind: 'input', code: '5020', label: 'Biaya Pokok Jasa' },
-    { kind: 'total', code: '4300', label: 'Laba Kotor', formula: [['4021', 1], ['4013', 1], ['5020', 1]] },
-    { kind: 'input', code: '4199', label: 'Pendapatan lain' },
+    { kind: 'total', code: '4300', label: 'Laba Kotor', formula: [['4021', 1], ['4013', -1], ['5020', -1]] },
+    { kind: 'input', code: '4199', label: 'Pendapatan lain', variant: 'full' },
     { kind: 'group', label: 'Beban Usaha' },
     { kind: 'input', code: '5311', label: 'Gaji, Tunjangan, Bonus, Honorarium, THR, dsb' },
     { kind: 'input', code: '5312', label: 'Beban imbalan kerja lain' },
@@ -298,10 +300,10 @@ const schemaBC04: SectorSchema = {
     { kind: 'total', code: '5400', label: 'Jumlah Beban Usaha', formula: [['5311', 1], ['5312', 1], ['5313', 1], ['5314', 1], ['5315', 1], ['5316', 1], ['5317', 1], ['5318', 1], ['5319', 1], ['5320', 1], ['5321', 1], ['5399', 1]] },
     { kind: 'total', code: '4500', label: 'Laba (Rugi) Usaha', formula: [['4300', 1], ['5400', -1], ['4199', 1]] },
     { kind: 'group', label: 'Pendapatan Non Usaha' },
-    { kind: 'input', code: '4501', label: 'Keuntungan Selisih Kurs' },
-    { kind: 'input', code: '4503', label: 'Keuntungan Penjualan Aset selain Persediaan' },
-    { kind: 'input', code: '4511', label: 'Pendapatan Bunga' },
-    { kind: 'input', code: '4599', label: 'Pendapatan Non Usaha Lainnya' },
+    { kind: 'input', code: '4501', label: 'Keuntungan Selisih Kurs', variant: 'full' },
+    { kind: 'input', code: '4503', label: 'Keuntungan Penjualan Aset selain Persediaan', variant: 'full' },
+    { kind: 'input', code: '4511', label: 'Pendapatan Bunga', variant: 'full' },
+    { kind: 'input', code: '4599', label: 'Pendapatan Non Usaha Lainnya', variant: 'full' },
     { kind: 'total', code: '4600', label: 'Jumlah Pendapatan Non Usaha', formula: [['4501', 1], ['4503', 1], ['4511', 1], ['4599', 1]] },
     { kind: 'group', label: 'Beban Non Usaha' },
     { kind: 'input', code: '5405', label: 'Kerugian Penjualan Aset selain Persediaan' },
