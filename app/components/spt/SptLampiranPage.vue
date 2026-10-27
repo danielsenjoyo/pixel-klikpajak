@@ -81,6 +81,7 @@ function applyImport(payload: ListPayload, mode: 'append' | 'replace') {
       </MpTabList>
     </MpTabs>
 
+    <fieldset class="kp-lock" :disabled="isReadOnly">
     <section v-for="p in visibleParts" :key="`${def.section}-${p.key}`" class="spt-lampiran__part">
       <div v-if="p.title || (p.import && !isReadOnly)" class="spt-lampiran__part-head">
         <MpText v-if="p.title" as="h3" size="h3" weight="semiBold" class="spt-lampiran__subtitle">{{ p.title }}</MpText>
@@ -136,6 +137,7 @@ function applyImport(payload: ListPayload, mode: 'append' | 'replace') {
         </template>
       </template>
     </section>
+    </fieldset>
 
     <SptImportModal
       v-if="importPart?.import"

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  MpBadge,
   MpButton,
   MpModal,
   MpModalBody,
@@ -23,7 +24,7 @@ import { blockingIssues, validateSpt, warningIssues } from '~/data/spt1771Valida
 import type { Issue } from '~/data/spt1771Engine'
 import { lampiranDef, lampiranLinks } from '~/data/spt1771LampiranDefs'
 import { labaKomersial, penghasilanNetoFiskal, penyusutanKomersial } from '~/data/spt1771Lampiran1'
-import { LIST_PATH, detailPath, findSection, isLocked, masaLabel, postedAtLabel, sectionHeading, sectionNumber } from '~/data/sptTahunanBadan'
+import { LAPOR_STATUS, LIST_PATH, detailPath, findSection, isLocked, masaLabel, postedAtLabel, sectionHeading, sectionNumber } from '~/data/sptTahunanBadan'
 
 // Lapor SPT Tahunan Badan — Figma "SPT-Tahunan-Badan › --> SPT":
 // page title (breadcrumb, Download petunjuk pengisian, Lapor SPT), in-page section
@@ -166,10 +167,6 @@ async function goToIssue(issue: Pick<Issue, 'section' | 'tab' | 'target'>) {
 const jumpToHasil = () => goToIssue({ section: 'induk', tab: 'perhitungan', target: `induk-f${hasil.value.line}` })
 onBeforeUnmount(() => clearTimeout(flashTimer))
 
-const status = computed(() => {
-  if (isReadOnly.value) return { label: 'Sudah dilaporkan', type: 'information' as const }
-  return isComplete.value ? { label: 'Lengkap', type: 'completed' as const } : { label: 'Belum lengkap', type: 'warning' as const }
-})
 
 const lampiranPage = computed(() => (spt.value ? lampiranDef(sectionKey.value, spt.value.year) : undefined))
 
@@ -311,6 +308,10 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
         :title="`Lapor SPT Tahunan Badan ${masaLabel(spt)}`"
         :breadcrumbs="[{ label: 'SPT Tahunan Badan', to: LIST_PATH }]"
       >
+        <template #status>
+          <!-- Status lapor, as SPT Masa PPN shows it next to its title. -->
+          <MpBadge id="spt-status" for="additionalInformation" :type="LAPOR_STATUS[spt.status].badge">{{ LAPOR_STATUS[spt.status].title }}</MpBadge>
+        </template>
         <template #actions>
           <MpButton id="spt-guide" variant="secondary" left-icon="help" @click="downloadGuide">Download petunjuk pengisian</MpButton>
           <MpButton id="spt-posting" variant="secondary" :is-disabled="isReadOnly" @click="onPosting">Posting SPT</MpButton>
@@ -332,7 +333,6 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
             v-model:collapsed="isNavCollapsed"
             :active-key="sectionKey"
             :href-for="hrefFor"
-            :status="status"
             :posted-at="spt ? postedAtLabel(spt) : null"
             :states="states"
             :hasil="hasil"
@@ -375,7 +375,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
               <MpBannerDescription>{{ notice.message }}</MpBannerDescription>
             </MpBanner>
 
-            <fieldset class="spt-lapor__fieldset" :disabled="isReadOnly">
+            <!-- Each form locks its own content when read-only, leaving its tabs usable. -->
+            <div class="spt-lapor__form">
               <SptIndukForm
                 v-if="sectionKey === 'induk'"
                 v-model="draft.induk"
@@ -390,6 +391,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
                 :href-for="hrefFor"
                 :is-but="!!company.isBut"
                 :lampiran="draft.lampiran"
+                :is-read-only="isReadOnly"
               />
               <SptLampiran1
                 v-else-if="sectionKey === 'lampiran-1'"
@@ -411,7 +413,7 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
                 @refresh-prefill="onRefreshPrefill"
               />
               <SptLampiranPlaceholder v-else :title="sectionTitle" />
-            </fieldset>
+            </div>
 
             <div v-if="!isReadOnly" class="spt-lapor__actions">
               <MpText v-if="isDirty" size="body-small" color="text.secondary">Ada perubahan yang belum disimpan</MpText>
@@ -530,11 +532,8 @@ onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload)
   padding: var(--mp-spacing-4) var(--mp-spacing-6) 0;
 }
 
-.spt-lapor__fieldset {
+.spt-lapor__form {
   min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
 }
 
 .spt-lapor__locked {

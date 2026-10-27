@@ -1,4 +1,4 @@
-import { emptyInduk, type SptIndukData } from '~/data/spt1771Induk'
+import { PERIODE_PEMBUKUAN, emptyInduk, type SptIndukData } from '~/data/spt1771Induk'
 import type { SectionData } from '~/data/spt1771Engine'
 import { emptyLampiran1, type Lampiran1Data } from '~/data/spt1771Lampiran1'
 import { emptyLampiran, seedDerived } from '~/data/spt1771LampiranDefs'
@@ -36,7 +36,8 @@ export function useSpt1771Form(sptId: string) {
   const store = useState<Record<string, Spt1771Form>>('kp-spt1771-forms', () => ({}))
   const { company } = useSession()
   // Lampiran 7's shape depends on the tax year, so the empty draft has to be built for it.
-  const year = useSptTahunanBadan().get(sptId)?.year ?? 0
+  const spt = useSptTahunanBadan().get(sptId)
+  const year = spt?.year ?? 0
 
   if (!store.value[sptId]) {
     store.value = {
@@ -44,6 +45,8 @@ export function useSpt1771Form(sptId: string) {
       [sptId]: {
         // Everything DJP/Coretax owns is seeded here and rendered read-only (brief §10).
         induk: emptyInduk({
+          // Periode pembukuan comes from the book year chosen when the SPT was created.
+          periodePembukuan: PERIODE_PEMBUKUAN[(spt?.startMonth ?? 1) - 1],
           npwp: company.value.npwp,
           nama: company.value.name,
           email: company.value.email,

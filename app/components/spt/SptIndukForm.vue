@@ -57,6 +57,8 @@ const props = defineProps<{
   /** Page heading, so the Induk is titled like every lampiran page. */
   title: string
   isPembetulan: boolean
+  /** Submitted SPT: the tabs stay browsable, everything in them is locked. */
+  isReadOnly?: boolean
   /** Rekening on the Coretax profile, for F.19b. */
   bankAccounts: Company['bankAccounts']
   /** Section → URL, so "Isi Lampiran" and source chips can be real links. */
@@ -136,6 +138,7 @@ const tarifHint = computed(() => (props.totals.is31eEligible
       <MpTab v-for="t in INDUK_TABS" :id="`induk-tab-${t.key}`" :key="t.key">{{ t.label }}</MpTab>
     </MpTabList>
 
+    <fieldset class="kp-lock" :disabled="isReadOnly">
     <MpTabPanels>
       <!-- ── 1. Ringkasan & Identitas ─────────────────────────────────────── -->
       <MpTabPanel>
@@ -404,6 +407,7 @@ const tarifHint = computed(() => (props.totals.is31eEligible
         </div>
       </MpTabPanel>
     </MpTabPanels>
+    </fieldset>
     </MpTabs>
   </div>
 </template>
