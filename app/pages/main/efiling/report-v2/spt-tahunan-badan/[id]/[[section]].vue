@@ -18,7 +18,7 @@ import blankSlateImage from '~/assets/images/blankslate-spt.png'
 import { formatRp } from '~/utils/currency'
 import { applyIssues, missingSections, requiredLampiran, sectionStates } from '~/data/spt1771Checkpoints'
 import { isRowFilled, type Row } from '~/data/spt1771Engine'
-import { computeInduk, gatingAnswers, hasilSpt, isIndukTab, type IndukTab } from '~/data/spt1771Induk'
+import { computeInduk, gatingAnswers, hasilSpt, isIndukTab, type IndukTab, type Pembetulan } from '~/data/spt1771Induk'
 import { blockingIssues, validateSpt, warningIssues } from '~/data/spt1771Validation'
 import type { Issue } from '~/data/spt1771Engine'
 import { lampiranDef, lampiranLinks } from '~/data/spt1771LampiranDefs'
@@ -56,7 +56,13 @@ const { draft, isDirty, save, discard, refreshPrefill } = useSpt1771Form(id)
 const isPembetulan = computed(() => (spt.value?.revision ?? 0) > 0)
 const isReadOnly = computed(() => !!spt.value && isLocked(spt.value))
 
-const totals = computed(() => computeInduk(draft.value.induk, penghasilanNetoFiskal(draft.value.lampiran1), isPembetulan.value, lampiranLinks(draft.value.lampiran)))
+// Angka 18a is DJP's, read off Modul TAM, so it reaches the calculation from the SPT
+// record rather than from the draft the preparer edits.
+const pembetulan = computed<Pembetulan | null>(() => (
+  isPembetulan.value ? { tamSebelumnya: spt.value?.tamPembetulanSebelumnya ?? 0 } : null
+))
+
+const totals = computed(() => computeInduk(draft.value.induk, penghasilanNetoFiskal(draft.value.lampiran1), pembetulan.value, lampiranLinks(draft.value.lampiran)))
 
 /** What every lampiran renders against — and, so the two agree, what its field rules see. */
 const lampiranCtx = computed(() => ({

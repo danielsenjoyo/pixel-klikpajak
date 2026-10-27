@@ -3,8 +3,9 @@ import { MpBadge, MpBanner, MpBannerDescription, MpText } from '@mekari/pixel3'
 import type { HasilSpt } from '~/data/spt1771Induk'
 import { formatRp } from '~/utils/currency'
 
-// Hasil SPT — the three-state result of angka 17c, or 18b on a pembetulan (brief §5).
-// It sits directly under that row rather than in a banner of its own, and stays an estimate until every
+// Hasil SPT — the three-state result of the line the return is settled on (brief §5):
+// angka 17c normally, angka 18b once the SPT is a pembetulan. It sits directly under
+// that row rather than in a banner of its own, and stays an estimate until every
 // required lampiran and field is filled.
 const props = defineProps<{ hasil: HasilSpt }>()
 
@@ -19,7 +20,7 @@ const badgeType = computed(() => BADGE[props.hasil.state])
 <template>
   <div id="induk-hasil" class="spt-hasil" :class="[`spt-hasil--${hasil.state}`, { 'spt-hasil--estimasi': !hasil.isFinal }]">
     <div class="spt-hasil__head">
-      <MpText size="label-small" weight="semiBold" color="text.secondary">Hasil SPT</MpText>
+      <MpText size="label-small" weight="semiBold" color="text.secondary">Hasil SPT (angka {{ hasil.line }})</MpText>
       <MpBadge for="additionalInformation" :type="badgeType">{{ hasil.label }}</MpBadge>
       <MpBadge for="tableStatus" :type="hasil.isFinal ? 'completed' : 'announcement'">
         {{ hasil.isFinal ? 'Final' : 'Estimasi sementara' }}

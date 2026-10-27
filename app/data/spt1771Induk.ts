@@ -131,7 +131,6 @@ export interface SptIndukData {
   // F. PPh kurang/lebih bayar
   f17b: YesNo
   f17bAmount: number | null
-  f18aAmount: number | null
   f19a: 'pemeriksaan' | 'pendahuluan' | null
   /** Id of a rekening on the Coretax profile — its nomor/pemilik are never typed here. */
   bankAccountId: string | null
@@ -185,7 +184,6 @@ export function emptyInduk(prefill: Partial<SptIndukData> = {}): SptIndukData {
     e16: false,
     f17b: false,
     f17bAmount: null,
-    f18aAmount: null,
     f19a: null,
     bankAccountId: null,
     g20: false,
@@ -231,6 +229,8 @@ export interface IndukTotals {
   is31eEligible: boolean
   f17a: number
   f17c: number
+  /** 18a as Coretax TAM records it; 0 on a normal return, which has no angka 18. */
+  f18a: number
   f18b: number
   isLebihBayar: boolean
   /** Each lampiran-sourced line (0 when its question is answered Tidak). */
@@ -241,13 +241,23 @@ export interface IndukTotals {
 const when = (flag: boolean, amount: number | null) => (flag ? n(amount) : 0)
 
 /**
+ * What makes an SPT a pembetulan, as far as the Induk is concerned: angka 18 exists, and
+ * 18a carries the figure Coretax reads off Modul TAM. Null stands for a normal return, so
+ * a TAM figure can never travel with one.
+ */
+export interface Pembetulan {
+  /** Angka 18a — PPh 29 recorded as paid, less SKPPKP refunds, before this correction. */
+  tamSebelumnya: number
+}
+
+/**
  * Every linked line belongs to a lampiran, so the Induk only ever reads it — the figure
  * is whatever that lampiran produces, and Rp 0 until it has something to produce. There is
  * no manual fallback on purpose: a typed Induk amount with an empty lampiran behind it is a
  * number the return cannot support, and the activation matrix already requires the lampiran
  * the moment its question is answered Ya.
  */
-export function computeInduk(d: SptIndukData, penghasilanNeto: number, isPembetulan: boolean, links: Partial<LampiranLinks> = {}): IndukTotals {
+export function computeInduk(d: SptIndukData, penghasilanNeto: number, pembetulan: Pembetulan | null, links: Partial<LampiranLinks> = {}): IndukTotals {
   const amount = {} as Record<LinkedKey, number>
   const take = (key: LinkedKey, fromLampiran: number | null | undefined): number => {
     amount[key] = d[key] ? n(fromLampiran) : 0
@@ -267,22 +277,24 @@ export function computeInduk(d: SptIndukData, penghasilanNeto: number, isPembetu
   const d12 = Math.max(0, d12FromLampiran8 ? hitungLampiran8(pasal31eBruto, pkp).total : Math.round(rate * pkpKenaTarif(pkp)))
   const f17a = d12 - take('e13', links.e13) - n(d.e14Amount) - n(d.e15Amount) - take('e16', links.e16)
   const f17c = f17a - when(d.f17b, d.f17bAmount)
-  const f18b = isPembetulan ? f17a - n(d.f18aAmount) : 0
+  const f18a = pembetulan ? pembetulan.tamSebelumnya : 0
+  const f18b = pembetulan ? f17a - f18a : 0
   return {
     d4, d7, d9, pkp, d12, d12FromLampiran8,
     pasal31eBruto,
     is31eEligible: pasal31eBruto <= BATAS_31E_MAKS,
-    f17a, f17c, f18b, isLebihBayar: f17c < 0 || f18b < 0, amount,
+    f17a, f17c, f18a, f18b, isLebihBayar: f17c < 0 || f18b < 0, amount,
   }
 }
 
 /**
- * Hasil SPT — the headline of the whole return (brief §5). Three states, read off
- * angka 17c. The nominal is always positive; the state carries the direction, and
- * Nihil shows no nominal at all.
+ * Hasil SPT — the headline of the whole return (brief §5). Three states, read off the
+ * line the return is settled on: angka 17c normally, angka 18b on a pembetulan, which
+ * is the line the correction itself changes. The nominal is always positive; the state
+ * carries the direction, and Nihil shows no nominal at all.
  *
- * Note: for a pembetulan the refund can also sit on 18b, which is why `isLebihBayar`
- * looks at both. The headline deliberately follows 17c alone, as the brief specifies.
+ * `isLebihBayar` looks at both lines, so the 19a/19b refund questions appear whichever
+ * of the two carries the overpayment.
  */
 export type HasilState = 'kb' | 'nihil' | 'lb'
 
